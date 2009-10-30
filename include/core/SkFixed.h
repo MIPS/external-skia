@@ -235,6 +235,9 @@ inline bool SkFixedNearlyZero(SkFixed x, SkFixed tolerance = SK_FixedNearlyZero)
     #define SkFloatToFixed(x)  SkFloatToFixed_arm(x)
 #endif
 
+#if defined(__mips__)
+#endif
+
 /////////////////////// Now define our macros to the portable versions if they weren't overridden
 
 #ifndef SkFixedSquare

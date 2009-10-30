@@ -43,6 +43,10 @@ ifeq ($(TARGET_ARCH),arm)
 	LOCAL_CFLAGS += -fomit-frame-pointer
 endif
 
+ifeq ($(TARGET_ARCH),mips)
+	LOCAL_CFLAGS += -fomit-frame-pointer
+endif
+
 include $(BUILD_SHARED_LIBRARY)
 
 #############################################################
@@ -188,6 +192,12 @@ ifeq ($(TARGET_ARCH),arm)
         LOCAL_SRC_FILES += \
 	        src/core/asm/s32a_d565_opaque.S
 endif
+
+#ifeq ($(TARGET_ARCH),mips)
+#        LOCAL_CFLAGS += -DUSE_MIPS_ASM
+#        LOCAL_SRC_FILES += \
+#	        src/core/arch-mips/s32a_d565_opaque.S
+#endif
 
 LOCAL_SHARED_LIBRARIES := \
 	libcutils \

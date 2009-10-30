@@ -74,8 +74,9 @@
     native support for floats. If your environment uses software floating point,
     define this flag.
  */
+#if !defined(__mips__) || defined(__mips_softfloat)
 #define SK_SOFTWARE_FLOAT
-
+#endif
 
 /*  Skia has lots of debug-only code. Often this is just null checks or other
     parameter checking, but sometimes it can be quite intrusive (e.g. check that

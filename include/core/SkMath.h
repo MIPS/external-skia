@@ -128,6 +128,10 @@ static inline unsigned SkClampUMax(unsigned value, unsigned max) {
     #define SkCLZ(x)    __builtin_clz(x)
 #endif
 
+#if defined(__mips32__) && defined(__mips32_isa__) && __mips32_isa__ >= 2 
+    #define SkCLZ(x)    __builtin_clz(x)
+#endif
+
 #ifndef SkCLZ
     #define SkCLZ(x)    SkCLZ_portable(x)
 #endif

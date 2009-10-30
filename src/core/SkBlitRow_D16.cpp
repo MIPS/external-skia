@@ -243,12 +243,22 @@ static void S32A_D565_Blend_Dither(uint16_t* SK_RESTRICT dst,
 // Use the assembly version of s32a_d565_opaque()
 #define USE_S32A_D565_OPAQUE_ASM
 
-#if defined(USE_S32A_D565_OPAQUE_ASM) && defined(USE_ARM_ASM)
+#if defined(USE_S32A_D565_OPAQUE_ASM)
+  #if defined(USE_ARM_ASM)
     extern "C" void s32a_d565_opaque_arm(uint16_t*, uint32_t*, size_t);
+  #endif
+  #if defined(USE_MIPS_ASM)
+    extern "C" void s32a_d565_opaque_mips(uint16_t*, uint32_t*, size_t);
+  #endif
 #endif
 
-#ifdef USE_T32CB16BLEND_ASM
+#if defined(USE_T32CB16BLEND_ASM)
+  #if defined(USE_ARM_ASM)
     extern "C" void scanline_t32cb16blend_arm(uint16_t*, uint32_t*, size_t);
+  #endif
+  #if defined(USE_MIPS_ASM)
+    extern "C" void scanline_t32cb16blend_mips(uint16_t*, uint32_t*, size_t);
+  #endif
 #endif
 
 static const SkBlitRow::Proc gProcs16[] = {
@@ -256,16 +266,25 @@ static const SkBlitRow::Proc gProcs16[] = {
     S32_D565_Opaque,
     S32_D565_Blend,
 
-#if defined(USE_S32A_D565_OPAQUE_ASM) && defined(USE_ARM_ASM)
+#if defined(USE_S32A_D565_OPAQUE_ASM) && (defined(USE_ARM_ASM) || defined(USE_ASM_MIPS))
+  #if defined(USE_ASM_ARM)
     (SkBlitRow::Proc)s32a_d565_opaque_arm,
+  #endif
+  #if defined(USE_ASM_MIPS)
+    (SkBlitRow::Proc)s32a_d565_opaque_mips,
+  #endif
 #elif defined(USE_S32A_D565_OPAQUE_CHECK)
     S32A_D565_Opaque_255Check,
-#elif defined(USE_T32CB16BLEND_ASM)
+#elif defined(USE_T32CB16BLEND_ASM) && (defined(USE_ARM_ASM) || defined(USE_MIPS_ASM))
+  #if defined(USE_ARM_ASM)
     (SkBlitRow::Proc)scanline_t32cb16blend_arm,
+  #endif
+  #if defined(USE_MIPS_ASM)
+    (SkBlitRow::Proc)scanline_t32cb16blend_mips,
+  #endif
 #else
     S32A_D565_Opaque,
 #endif
-
     S32A_D565_Blend,
 
     // dither

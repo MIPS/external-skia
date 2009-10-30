@@ -77,5 +77,9 @@
     #define SK_CPU_HAS_CONDITIONAL_INSTR
 #endif
 
+#if (defined(__mips) && (__mips == 32))
+    /* MIPS32 has conditional move instruction which allows it to take advantage of this optimisation */
+    #define SK_CPU_HAS_CONDITIONAL_INSTR
 #endif
 
+#endif
