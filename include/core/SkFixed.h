@@ -235,6 +235,91 @@ inline bool SkFixedNearlyZero(SkFixed x, SkFixed tolerance = SK_FixedNearlyZero)
     #define SkFloatToFixed(x)  SkFloatToFixed_arm(x)
 #endif
 
+#if (defined (__mips__) && defined(__MIPSEL__))
+	/* This guy does not handle NaN or other obscurities, but is faster than
+       than (int)(x*65536) when we only have software floats
+    */
+    inline SkFixed SkFloatToFixed_mips(float x)
+    {
+        register int32_t t0,t1,t2,t3;
+        SkFixed res;
+        
+        asm("srl    %[t0],%[x],31  \r\n"       /* t0 <- sign bit */
+            "srl    %[t1],%[x],23  \r\n"
+            "andi   %[t1],%[t1],0xff  \r\n"       /*get the e*/
+            "li     %[t2],0x8e \r\n"
+            "subu   %[t1],%[t2],%[t1] \r\n"      /*t1=127+15-e*/
+            "sll    %[t2],%[x],8 \r\n"            /* mantissa<<8 */
+            "lui	%[t3],0x8000 \r\n"
+            "or	    %[t2],%[t2],%[t3] \r\n"       /* add the missing 1 */
+            "srl    %[res],%[t2],%[t1] \r\n"      /* scale to 16.16 */
+            "subu   %[t2],$zero,%[res] \r\n"
+            "movn   %[res],%[t2],%[t0] \r\n"      /*if negate?*/
+            "or     %[t1],%[x],$zero \r\n"         /*a0=0?*/
+            "movz   %[res],$zero,%[t1] \r\n"
+            : [res]"=&r"(res),[t0]"=&r"(t0),[t1]"=&r"(t1),[t2]"=&r"(t2),[t3]"=&r"(t3)
+            : [x] "r" (x)
+            );
+            return res;
+    }
+    inline SkFixed SkFixedMul_mips(SkFixed x, SkFixed y)
+    {
+        SkFixed res;
+    	int32_t t0;
+    	asm("mult   %[x],%[y] \r\n"
+        	"mfhi   %[t0] \r\n"
+        	"mflo   %[res] \r\n"
+        	"srl    %[res],%[res],16 \r\n"
+        	"sll    %[t0],%[t0],16 \r\n"
+        	"or     %[res],%[res],%[t0] \r\n"
+        	: [res]"=&r"(res),[t0]"=&r"(t0)
+        	: [x] "r" (x), [y] "r" (y)
+        	);
+        	return res;
+    }
+    inline SkFixed SkFixedMulAdd_mips(SkFixed x, SkFixed y, SkFixed a)
+    {
+        SkFixed res;
+    	int32_t t0;
+    	asm("mult   %[x],%[y] \r\n"
+        	"mflo   %[res] \r\n"
+        	"mfhi   %[t0] \r\n"
+        	"srl    %[res],%[res],16 \r\n"
+        	"sll    %[t0],%[t0],16 \r\n"
+        	"or     %[res],%[res],%[t0] \r\n"
+        	"add    %[res],%[res],%[a] \r\n"
+        	: [res]"=&r"(res),[t0]"=&r"(t0)
+        	: [x] "r" (x), [y] "r" (y), [a] "r" (a)
+        	);
+        	return res;
+    }
+    inline SkFixed SkFractMul_mips(SkFixed x, SkFixed y)
+    {
+        SkFixed res;
+    	int32_t t0;
+    	asm("mult   %[x],%[y] \r\n"
+        	"mfhi   %[t0] \r\n"
+        	"mflo   %[res] \r\n"
+        	"srl    %[res],%[res],30 \r\n"
+        	"sll    %[t0],%[t0],2 \r\n"
+        	"or     %[res],%[res],%[t0] \r\n"
+        	: [res]"=&r"(res),[t0]"=&r"(t0)
+        	: [x] "r" (x), [y] "r" (y)
+        	);
+        	return res;
+    }
+
+    #undef SkFixedMul
+    #undef SkFractMul
+    #define SkFixedMul(x, y)        SkFixedMul_mips(x, y)
+    #define SkFractMul(x, y)        SkFractMul_mips(x, y)
+    #define SkFixedMulAdd(x, y, a)  SkFixedMulAdd_mips(x, y, a)
+
+    #undef SkFloatToFixed
+    #define SkFloatToFixed(x)  SkFloatToFixed_mips(x)
+    
+#endif
+
 /////////////////////// Now define our macros to the portable versions if they weren't overridden
 
 #ifndef SkFixedSquare
