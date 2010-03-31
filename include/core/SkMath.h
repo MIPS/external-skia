@@ -176,7 +176,7 @@ static inline int SkNextLog2(uint32_t value) {
             );
         return product;
     }
-#elseif defined(__mips__)
+#elif defined(__mips__)
 	static inline int32_t SkMulS16(S16CPU x, S16CPU y) {
         SkASSERT((int16_t)x == x);
         SkASSERT((int16_t)y == y);
