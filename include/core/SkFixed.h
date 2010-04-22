@@ -253,10 +253,12 @@ inline bool SkFixedNearlyZero(SkFixed x, SkFixed tolerance = SK_FixedNearlyZero)
             "lui	%[t3],0x8000 \r\n"
             "or	    %[t2],%[t2],%[t3] \r\n"       /* add the missing 1 */
             "srl    %[res],%[t2],%[t1] \r\n"      /* scale to 16.16 */
+            "sltiu  %[t3],%[t1],32 \r\n"          /* t3=1 if t1<32, else t3=0. t1>=32 means the float value is too small.*/
             "subu   %[t2],$zero,%[res] \r\n"
             "movn   %[res],%[t2],%[t0] \r\n"      /*if negate?*/
             "or     %[t1],%[x],$zero \r\n"         /*a0=0?*/
             "movz   %[res],$zero,%[t1] \r\n"
+            "movz   %[res],$zero,%[t3] \r\n"       /*t3=0 then res=0*/
             : [res]"=&r"(res),[t0]"=&r"(t0),[t1]"=&r"(t1),[t2]"=&r"(t2),[t3]"=&r"(t3)
             : [x] "r" (x)
             );
@@ -267,13 +269,14 @@ inline bool SkFixedNearlyZero(SkFixed x, SkFixed tolerance = SK_FixedNearlyZero)
         SkFixed res;
     	int32_t t0;
     	asm("mult   %[x],%[y] \r\n"
-        	"mfhi   %[t0] \r\n"
         	"mflo   %[res] \r\n"
+        	"mfhi   %[t0] \r\n"
         	"srl    %[res],%[res],16 \r\n"
         	"sll    %[t0],%[t0],16 \r\n"
         	"or     %[res],%[res],%[t0] \r\n"
         	: [res]"=&r"(res),[t0]"=&r"(t0)
         	: [x] "r" (x), [y] "r" (y)
+        	: "%hi","%lo"
         	);
         	return res;
     }
@@ -290,6 +293,7 @@ inline bool SkFixedNearlyZero(SkFixed x, SkFixed tolerance = SK_FixedNearlyZero)
         	"add    %[res],%[res],%[a] \r\n"
         	: [res]"=&r"(res),[t0]"=&r"(t0)
         	: [x] "r" (x), [y] "r" (y), [a] "r" (a)
+        	: "%hi","%lo"
         	);
         	return res;
     }
@@ -305,6 +309,7 @@ inline bool SkFixedNearlyZero(SkFixed x, SkFixed tolerance = SK_FixedNearlyZero)
         	"or     %[res],%[res],%[t0] \r\n"
         	: [res]"=&r"(res),[t0]"=&r"(t0)
         	: [x] "r" (x), [y] "r" (y)
+        	: "%hi","%lo"
         	);
         	return res;
     }
