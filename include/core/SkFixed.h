@@ -259,11 +259,8 @@ inline bool SkFixedNearlyZero(SkFixed x, SkFixed tolerance = SK_FixedNearlyZero)
             "	srl	%[res],%[t2],%[t1] \n"	/* scale to 16.16 */
             "	subu	%[t2],$zero,%[res] \n"
             "	movn	%[res],%[t2],%[t0] \n"	/* if negative? */
-#if 0
-            "	movz	%[res],$zero,%[x]  \n"
-            "	sltiu	%[t3],%[t1],32     \n"	/* t3=1 if t1<32, else t3=0. t1>=32 means the float value is too small.*/
-            "	movz	%[res],$zero,%[t3] \n"	/* t3=0 then res=0 */
-#endif
+            "	sltiu	%[t3],%[t1],32     \n"	/* if t1>=32 the float value is too small */
+            "	movz	%[res],$zero,%[t3] \n"	/* so res=0 */
             : [res]"=&r"(res),[t0]"=&r"(t0),[t1]"=&r"(t1),[t2]"=&r"(t2),[t3]"=&r"(t3)
             : [x] "r" (x)
             );
