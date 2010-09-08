@@ -191,7 +191,7 @@ LOCAL_SRC_FILES += \
 	src/opts/SkBitmapProcState_opts_arm.cpp
 else
 LOCAL_SRC_FILES += \
-	src/opts/SkBlitRow_opts_none.cpp \
+	src/opts/SkBlitRow_opts_mips.cpp \
 	src/opts/SkBitmapProcState_opts_none.cpp
 endif
 
