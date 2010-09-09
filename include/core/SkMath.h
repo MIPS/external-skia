@@ -189,6 +189,7 @@ static inline int SkNextLog2(uint32_t value) {
         asm("mul %0, %1, %2 \n"
             : "=r"(product)
             : "r"(x), "r"(y)
+	    : "hi", "lo"
             );
         return product;
     }
