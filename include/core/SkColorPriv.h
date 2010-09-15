@@ -225,7 +225,7 @@ extern const uint32_t gMask_00FF00FF;
 
 static inline uint32_t SkAlphaMulQ(uint32_t c, unsigned scale) {
 
-#if defined	( __mips_dsp)
+#if defined ( __mips_dsp) && defined (SK_CPU_LENDIAN)
     register int32_t t0, t1, t2;
     asm volatile(
 	"replv.ph %[t2], %[scale]		\n\t"
