@@ -16,7 +16,9 @@ LOCAL_SRC_FILES:= \
         SrcOverTest.cpp \
         StreamTest.cpp \
         SortTest.cpp \
-        PathMeasureTest.cpp
+        PathMeasureTest.cpp \
+        S32_BlitRow_Tests.cpp \
+        Filter32_Tests.cpp
 
 # The name of the file with a main function must
 # match native test's naming rule: xxx_test.cpp.
@@ -31,7 +33,8 @@ LOCAL_C_INCLUDES := \
         external/skia/include/images \
         external/skia/include/ports \
         external/skia/include/utils \
-        external/skia/src/core
+        external/skia/src/core \
+        external/skia/src/opts
 
 LOCAL_SHARED_LIBRARIES := \
         libskia libcutils
