@@ -818,7 +818,7 @@ static void S32_Blend_BlitRow32_mips(SkPMColor* SK_RESTRICT dst,
     __asm__ __volatile__ (
       "li               %[t2], 0x100               \n\t"
       "addi             %[t0], %[alpha], 1         \n\t"
-      "sub              %[t1], %[t2], %[t0]        \n\t"
+      "subu              %[t1], %[t2], %[t0]       \n\t"
       "replv.qb         %[t7], %[t0]               \n\t"    // t7 = src_scale|src_scale|src_scale|src_scale
       "replv.qb         %[t6], %[t1]               \n\t"    // t6 = dst_scale|dst_scale|dst_scale|dst_scale
       "1:	                                   \n\t"
@@ -835,7 +835,7 @@ static void S32_Blend_BlitRow32_mips(SkPMColor* SK_RESTRICT dst,
       "muleu_s.ph.qbr   %[t4], %[t6], %[t2]        \n\t"    // dst_scale * t2
       "muleu_s.ph.qbr   %[t5], %[t6], %[t3]        \n\t"    // dst_scale * t3
       "precrq.qb.ph     %[t2], %[t5], %[t4]        \n\t"
-      "add              %[t1], %[t0], %[t2]        \n\t"    // dst = dst + t2
+      "addu              %[t1], %[t0], %[t2]       \n\t"    // dst = dst + t2
       "sw               %[t1], 0(%[dst1])          \n\t"
       "addi             %[src1], %[src1], 4        \n\t"    // src += 1
       "addi             %[dst1], %[dst1], 4        \n\t"    // dst += 1
