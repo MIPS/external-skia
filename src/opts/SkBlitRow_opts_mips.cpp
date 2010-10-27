@@ -381,11 +381,7 @@ static void S32_D565_Opaque_Dither_mips(uint16_t* __restrict__ dst,
      }
 }
 
-#define S32_D565_Opaque_Dither_PROC S32_D565_Opaque_Dither_mips
 
-#endif //__mips_dsp
-
-#if defined ( __mips_dsp)
 static void S32_D565_Blend_Dither_mips(uint16_t* dst,
                                     const SkPMColor* src,
                                     int count, U8CPU alpha, int x, int y) {
@@ -566,11 +562,7 @@ static void S32_D565_Blend_Dither_mips(uint16_t* dst,
         DITHER_INC_X(x);
    }
 }
-#define S32_D565_Blend_Dither_PROC S32_D565_Blend_Dither_mips
 
-#endif //__mips_dsp
-
-#if defined ( __mips_dsp)
 static void S32A_D565_Opaque_mips(uint16_t* __restrict__ dst,
                                       const SkPMColor* __restrict__ src,
                                       int count, U8CPU alpha, int x, int y) {
@@ -681,11 +673,6 @@ static void S32A_D565_Opaque_mips(uint16_t* __restrict__ dst,
     }
 }
 
-#define S32A_D565_Opaque_PROC S32A_D565_Opaque_mips
-
-#endif //__mips_dsp
-
-#if defined ( __mips_dsp)
 static void S32A_D565_Blend_mips(uint16_t* SK_RESTRICT dst,
                               const SkPMColor* SK_RESTRICT src, int count,
                                U8CPU alpha, int /*x*/, int /*y*/) {
@@ -819,11 +806,7 @@ static void S32A_D565_Blend_mips(uint16_t* SK_RESTRICT dst,
         dst1 +=1;
    }
 }
-#define S32A_D565_Blend_PROC S32A_D565_Blend_mips
 
-#endif //__mips_dsp
-
-#ifdef __mips_dsp
 static void S32_Blend_BlitRow32_mips(SkPMColor* SK_RESTRICT dst,
                                 const SkPMColor* SK_RESTRICT src,
                                 int count, U8CPU alpha) {
@@ -865,7 +848,20 @@ static void S32_Blend_BlitRow32_mips(SkPMColor* SK_RESTRICT dst,
         [t6] "r" (t6),  [t7] "r" (t7)
     );
 }
-#define S32_Blend_BlitRow32_PROC S32_Blend_BlitRow32_mips
+
+#define S32_D565_Opaque_Dither_PROC	S32_D565_Opaque_Dither_mips
+#define S32A_D565_Opaque_PROC		S32A_D565_Opaque_mips
+#define S32_D565_Blend_Dither_PROC	S32_D565_Blend_Dither_mips
+#define S32A_D565_Blend_PROC		S32A_D565_Blend_mips
+#define S32_Blend_BlitRow32_PROC	S32_Blend_BlitRow32_mips
+
+#else	//__mips_dsp
+
+#define S32_D565_Opaque_Dither_PROC	NULL
+#define S32A_D565_Opaque_PROC		NULL
+#define S32_D565_Blend_Dither_PROC	NULL
+#define S32A_D565_Blend_PROC		NULL
+#define S32_Blend_BlitRow32_PROC	NULL
 
 #endif //__mips_dsp
 
