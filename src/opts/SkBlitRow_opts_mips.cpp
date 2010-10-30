@@ -251,7 +251,7 @@ static void S32A_D565_Opaque_Dither_mips(uint16_t* __restrict__ dst,
 	}
 }
 
-#define	S32A_D565_Opaque_Dither_PROC S32A_D565_Opaque_Dither_mips
+#define	S32A_D565_Opaque_Dither_PROC NULL
 
 #define S32_D565_Blend_PROC	S32_D565_Blend_mips
 //#define S32_D565_Blend_PROC	S32A_D565_Blend_PROC
@@ -268,22 +268,14 @@ static void S32_D565_Opaque_Dither_mips(uint16_t* __restrict__ dst,
     uint16_t dither_scan = gDitherMatrix_3Bit_16[(y) & 3];
     register uint32_t t0, t1, t2, t3, t4, t5, t6, t7;
     register uint32_t t8, t9, t10, t11, t12, t13, t14, t15, t16;
-    union {
-	uint16_t h[4];
-	uint64_t ll;
-    }dither;
+    int dither[4];
     int i;
-    uint16_t *ditherp;
-
     for(i = 0; i < 4; i++, x++)
-        dither.h[i] = (dither_scan >> ((x&3)<<2)) & 0xF;
-#ifndef SK_CPU_BENDIAN
-    /* Swap 2 dither values to maintain correct ordering in 32 bits */
-    dither.ll = ((dither.ll & 0x0000ffff0000ffffULL) << 16) |
-			((dither.ll & 0xffff0000ffff0000ULL) >> 16);
-#endif
-    ditherp = dither.h;
-    __asm__ __volatile__ (
+    {
+        dither[i] = (dither_scan >> ((x&3)<<2)) & 0xF;
+    }
+
+    asm volatile (
         "ble            %[count], $0, 1f	\n\t"
         "li             %[t13], 1		\n\t"
         "li             %[t15], 0               \n\t"
@@ -294,13 +286,17 @@ static void S32_D565_Opaque_Dither_mips(uint16_t* __restrict__ dst,
         "beq            %[count], $0, 1f   	\n\t"
 
         "beq            %[t15], %[t16], 3f	 \n\t"
-        "lw             %[t1], 0(%[ditherp])      \n\t"
+        "lw             %[t0], 0(%[dither])      \n\t"
+        "lw             %[t1], 4(%[dither])      \n\t"
         "li             %[t15], 1                \n\t"
         "b              4f                 	 \n\t"
         "3:                            		 \n\t"
-        "lw             %[t1], 4(%[ditherp])   \n\t"
+        "lw             %[t0], 8(%[dither])   \n\t"
+        "lw             %[t1], 12(%[dither])   \n\t"
         "li             %[t15], 0                \n\t"
         "4:					 \n\t"
+	"sll            %[t2], %[t0], 16         \n\t"
+	"or             %[t1], %[t2], %[t1]      \n\t"
         "lw             %[t0], 0(%[src])         \n\t"
         "lw             %[t2], 4(%[src])         \n\t"
 #ifdef SK_CPU_BENDIAN
@@ -365,10 +361,11 @@ static void S32_D565_Opaque_Dither_mips(uint16_t* __restrict__ dst,
         "b              2b            		 \n\t"
         "1:		                         \n\t"
         :
-        : [dst] "r" (dst), [src] "r" (src), [count] "r" (count), [x] "r" (x), [ditherp] "r" (ditherp),
+        : [dst] "r" (dst), [src] "r" (src), [count] "r" (count), [x] "r" (x), [dither] "r" (dither),
         [t0] "r" (t0), [t1] "r" (t1), [t2] "r" (t2), [t3] "r" (t3), [t4] "r" (t4), [t5] "r" (t5), [t6] "r" (t6),
         [t7] "r" (t7), [t8] "r" (t8), [t9] "r" (t9), [t10] "r" (t10), [t11] "r" (t11), [t12] "r" (t12), [t13] "r" (t13),  [t14] "r" (t14),
         [t15] "r" (t15), [t16] "r" (t16)
+	:"memory"
     );
     if (count == 1)
      {
