@@ -129,34 +129,55 @@ static void S32A_D565_Opaque_Dither_mips(uint16_t* __restrict__ dst,
 		"srav   %[t6], %[dither_scan], %[t5]    \n\t"
 		"addiu	%[x], %[x], 1			\n\t"/*increment x*/
 		"ins	%[t3], %[t6], 8, 4		\n\t" /*t3 has 2 ops*/
+#ifdef SK_CPU_BENDIAN
+		"andi    %[t4], %[t1], 0xff             \n\t"
+		"addiu	%[t0], %[t4], 1			\n\t" /*SkAlpha255To256(a)*/
+		"andi    %[t4], %[t2], 0xff             \n\t"
+#else
 		"srl	%[t4], %[t1], 24		\n\t" /*a0*/
 		"addiu	%[t0], %[t4], 1			\n\t" /*SkAlpha255To256(a)*/
 		"srl	%[t4], %[t2], 24		\n\t" /*a1*/
+#endif
 		"addiu	%[t5], %[t4], 1			\n\t" /*SkAlpha255To256(a)*/
-		"ins	%[t0], %[t5], 16, 16		\n\t" /*t0 has 2 d*/
+		"ins	%[t0], %[t5], 16, 16		\n\t" /*t0 has 2 (a+1)s*/
 		"muleu_s.ph.qbr %[t4], %[t3], %[t0]	\n\t" 
 		"preceu.ph.qbla %[t3], %[t4]		\n\t" /*t3 = t4>>8*/
+#ifdef SK_CPU_BENDIAN
+		"srl    %[t4], %[t1], 24                \n\t"
+		"srl	%[t5], %[t2], 24		\n\t"
+		"ins	%[t4], %[t5], 16, 16		\n\t"
+#else
 		"andi	%[t4], %[t1], 0xff		\n\t"/*Calculating sr from src1*/
 		"ins	%[t4], %[t2], 16, 8		\n\t"/*multiple sr's in reg t4*/
+#endif
 		"shrl.qb %[t5], %[t4], 5		\n\t"
 		"subu.qb %[t6], %[t3], %[t5]		\n\t"
 		"addq.ph %[t5], %[t6], %[t4]		\n\t" /*new sr*/
-
+#ifdef SK_CPU_BENDIAN
+		"ext	%[t4], %[t1], 16, 8		\n\t"
+		"srl	%[t6], %[t2], 16		\n\t"
+		"ins	%[t4], %[t6], 16, 8		\n\t"
+#else
 		"ext	%[t4], %[t1], 8, 8		\n\t"/*Calculating sg from src1*/	
 		"srl	%[t6], %[t2], 8			\n\t"
 		"ins	%[t4], %[t6], 16, 8		\n\t"
+#endif
 		"shrl.qb %[t6], %[t4], 6		\n\t"
 		"shrl.qb %[t7], %[t3], 1		\n\t"
 		"subu.qb %[t8], %[t7], %[t6]		\n\t"
 		"addq.ph %[t6], %[t8], %[t4]		\n\t"/*new sg*/
-
+#ifdef SK_CPU_BENDIAN
+		"ext    %[t4], %[t1], 8, 8              \n\t"
+		"srl    %[t7], %[t2], 8                 \n\t"
+		"ins    %[t4], %[t7], 16, 8             \n\t"
+#else
 		"ext	%[t4], %[t1], 16, 8		\n\t"/*Calculating sb from src1*/
 		"srl	%[t7], %[t2], 16		\n\t"
 		"ins	%[t4], %[t7], 16, 8		\n\t"
+#endif
 		"shrl.qb %[t7], %[t4], 5		\n\t"
 		"subu.qb %[t8], %[t3], %[t7]            \n\t"
-		"addq.ph %[t7], %[t8], %[t4]		\n\t" /*new sg*/
-		
+		"addq.ph %[t7], %[t8], %[t4]		\n\t" /*new sb*/
 		"shll.ph %[t4], %[t7], 2		\n\t"/*src expanded*/
 		"andi	%[t9], %[t4], 0xffff		\n\t"/*sb1*/
 		"srl	%[t10], %[t4], 16		\n\t"/*sb2*/
@@ -164,60 +185,53 @@ static void S32A_D565_Opaque_Dither_mips(uint16_t* __restrict__ dst,
 		"srl	%[t4], %[t6], 16		\n\t"/*sg2*/
 		"andi	%[t6], %[t5], 0xffff		\n\t"/*sr1*/
 		"srl	%[t7], %[t5], 16		\n\t"/*sr2*/
-
+		"subq.ph %[t5], %[t12], %[t0]          \n\t"
+		"srl	%[t11], %[t5], 3                \n\t"/*(256-a)>>3*/
 		"beqz	%[t1], 3f			\n\t"
 		"lhu	%[t5], 0(%[dst])		\n\t"
-		"sll	%[t11], %[t6], 13		\n\t"/*sr << 13*/
-		"or	%[t8], %[t9], %[t11]		\n\t"/*sr1|sb1*/
-		"sll	%[t11], %[t3], 24		\n\t"/*sg1 << 24*/
-		"or	%[t9], %[t11], %[t8]		\n\t"/*t9 = sr1|srb1|sg1*/
-		
+		"sll	%[t1], %[t6], 13		\n\t"/*sr1 << 13*/
+		"or	%[t8], %[t9], %[t1]		\n\t"/*sr1|sb1*/
+		"sll	%[t1], %[t3], 24		\n\t"/*sg1 << 24*/
+		"or	%[t9], %[t1], %[t8]		\n\t"/*t9 = sr1|sb1|sg1*/
 		"andi	%[t3], %[t5], 0x7e0		\n\t"
 		"sll	%[t6], %[t3], 0x10		\n\t"
 		"and	%[t8], %[t13], %[t5]		\n\t"
 		"or	%[t5], %[t6], %[t8]		\n\t"/*dst_expanded*/
-		"subq.ph %[t11], %[t12], %[t0]		\n\t"/*257 - (a+1)*/
-		"shra.ph %[t8], %[t11], 3		\n\t"/*(256-a)>>3*/
-		"andi	%[t0], %[t8], 0xff		\n\t"
-		"mul	%[t11], %[t0], %[t5]		\n\t"/*dst_expanded*/	
-		"srl	%[t1], %[t8], 0x10		\n\t"/**/
-		"addu	%[t5], %[t11], %[t9]		\n\t"
+		"andi	%[t6], %[t11], 0xff		\n\t"
+		"mul	%[t1], %[t6], %[t5]		\n\t"/*dst_expanded*/
+		"addu	%[t5], %[t1], %[t9]		\n\t"
 		"srl	%[t6], %[t5], 5			\n\t"
 		"and	%[t5], %[t13], %[t6]		\n\t"/*~greenmask*/
 		"srl	%[t8], %[t6], 16		\n\t"
-		"andi	%[t10], %[t8], 0x7e0		\n\t"
-		"or	%[t11], %[t5], %[t10]		\n\t"
-		"sh	%[t11], 0(%[dst])		\n\t"
+		"andi	%[t6], %[t8], 0x7e0		\n\t"
+		"or	%[t1], %[t5], %[t6]		\n\t"
+		"sh	%[t1], 0(%[dst])		\n\t"
 		"3:					\n\t"
 		"beqz	%[t2], 2f			\n\t"
 		"lhu	%[t5], 2(%[dst])		\n\t"
-		"sll	%[t11], %[t7], 13		\n\t"/*sr << 13*/
-		"or	%[t8], %[t10], %[t11]		\n\t"/*sr1|sb1*/
-		"sll	%[t11], %[t4], 24		\n\t"/*sg1 << 24*/
-		"or	%[t9], %[t11], %[t8]		\n\t"/*t9 = sr1|srb1|sg1*/
-		
+		"sll	%[t1], %[t7], 13		\n\t"/*sr2 << 13*/
+		"or	%[t8], %[t10], %[t1]		\n\t"/*sb2|sr2*/
+		"sll	%[t1], %[t4], 24		\n\t"/*sg2 << 24*/
+		"or	%[t9], %[t1], %[t8]		\n\t"/*t9 = sr2|srb2|sg2*/
 		"andi	%[t3], %[t5], 0x7e0		\n\t"
 		"sll	%[t6], %[t3], 0x10		\n\t"
 		"and	%[t8], %[t13], %[t5]		\n\t"
 		"or	%[t5], %[t6], %[t8]		\n\t"/*dst_expanded*/
-		"subq.ph %[t11], %[t12], %[t0]		\n\t"/*257 - (a+1)*/
-		"shra.ph %[t8], %[t11], 3		\n\t"/*(256-a)>>3*/
-		"andi	%[t0], %[t8], 0xff		\n\t"
-		"mul	%[t11], %[t0], %[t5]		\n\t"/*dst_expanded*/	
-		"srl	%[t1], %[t8], 0x10		\n\t"/**/
-		"addu	%[t5], %[t11], %[t9]		\n\t"
+		"srl     %[t6], %[t11], 16		\n\t"/*(256-a)>>3*/
+		"mul	%[t1], %[t6], %[t5]		\n\t"/*dst_expanded*/
+		"addu	%[t5], %[t1], %[t9]		\n\t"
 		"srl	%[t6], %[t5], 5			\n\t"
 		"and	%[t5], %[t13], %[t6]		\n\t"/*~greenmask*/
 		"srl	%[t8], %[t6], 16		\n\t"
-		"andi	%[t10], %[t8], 0x7e0		\n\t"
-		"or	%[t11], %[t5], %[t10]		\n\t"
-		"sh	%[t11], 2(%[dst])		\n\t"
+		"andi	%[t6], %[t8], 0x7e0		\n\t"
+		"or	%[t1], %[t5], %[t6]		\n\t"
+		"sh	%[t1], 2(%[dst])		\n\t"
 		"2:					\n\t"
 		"addiu	%[count], %[count], -2		\n\t"
 		"addiu	%[src], %[src], 8		\n\t"
 		"addiu	%[dst], %[dst], 4		\n\t"
 		"bgt	%[count], %[t14], 1b		\n\t"
-		: [t0]"=r"(t0), [t1]"=&r"(t1), [src]"=&r"(src), [count]"=&r"(count), [dst]"=&r"(dst), 
+		: [t0]"=&r"(t0), [t1]"=&r"(t1), [src]"=&r"(src), [count]"=&r"(count), [dst]"=&r"(dst),
 		  [x]"=&r"(x), [t2]"=&r"(t2), [t3]"=&r"(t3), [t4]"=&r"(t4),  [t5]"=&r"(t5),
                   [t6]"=&r"(t6), [t7]"=&r"(t7),  [t8]"=&r"(t8),  [t9]"=&r"(t9),  [t10]"=&r"(t10),  
                   [t11]"=&r"(t11), [t12]"=&r"(t12), [t13]"=&r"(t13), [t14]"=&r"(t14)
@@ -251,7 +265,7 @@ static void S32A_D565_Opaque_Dither_mips(uint16_t* __restrict__ dst,
 	}
 }
 
-#define	S32A_D565_Opaque_Dither_PROC NULL
+#define	S32A_D565_Opaque_Dither_PROC S32A_D565_Opaque_Dither_mips
 
 #define S32_D565_Blend_PROC	S32_D565_Blend_mips
 //#define S32_D565_Blend_PROC	S32A_D565_Blend_PROC
