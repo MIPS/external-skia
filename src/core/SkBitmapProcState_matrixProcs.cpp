@@ -35,6 +35,8 @@ void decal_filter_scale(uint32_t dst[], SkFixed fx, SkFixed dx, int count);
 #define CHECK_FOR_DECAL
 #if	defined(__ARM_HAVE_NEON)
     #include "SkBitmapProcState_matrix_clamp.h"
+#elif( __mips__)
+    #include "SkBitmapProcState_matrix_mips_clamp.h"
 #else
     #include "SkBitmapProcState_matrix.h"
 #endif
@@ -46,6 +48,8 @@ void decal_filter_scale(uint32_t dst[], SkFixed fx, SkFixed dx, int count);
 #define TILEY_LOW_BITS(fy, max) ((((fy) & 0xFFFF) * ((max) + 1) >> 12) & 0xF)
 #if	defined(__ARM_HAVE_NEON)
     #include "SkBitmapProcState_matrix_repeat.h"
+#elif( __mips__)
+    #include "SkBitmapProcState_matrix_mips_repeat.h"
 #else
     #include "SkBitmapProcState_matrix.h"
 #endif
