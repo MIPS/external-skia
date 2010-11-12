@@ -18,7 +18,8 @@ LOCAL_SRC_FILES:= \
         SortTest.cpp \
         PathMeasureTest.cpp \
         S32_BlitRow_Tests.cpp \
-        Filter32_Tests.cpp
+        Filter32_Tests.cpp \
+        MatrixProcsTest.cpp
 
 # The name of the file with a main function must
 # match native test's naming rule: xxx_test.cpp.
