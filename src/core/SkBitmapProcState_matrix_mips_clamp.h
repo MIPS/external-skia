@@ -1,10 +1,10 @@
 
-#define SCALE_NOFILTER_NAME     MAKENAME(_nofilter_scale)
-#define SCALE_FILTER_NAME       MAKENAME(_filter_scale)
+#define SCALE_NOFILTER_NAME     MAKENAME(_nofilter_scale_mips)
+#define SCALE_FILTER_NAME       MAKENAME(_filter_scale_mips)
 #define AFFINE_NOFILTER_NAME    MAKENAME(_nofilter_affine_mips)
 #define AFFINE_FILTER_NAME      MAKENAME(_filter_affine_mips)
 #define PERSP_NOFILTER_NAME     MAKENAME(_nofilter_persp_mips)
-#define PERSP_FILTER_NAME       MAKENAME(_filter_persp)
+#define PERSP_FILTER_NAME       MAKENAME(_filter_persp_mips)
 
 #define PACK_FILTER_X_NAME  MAKENAME(_pack_filter_x)
 #define PACK_FILTER_Y_NAME  MAKENAME(_pack_filter_y)
@@ -53,6 +53,49 @@ void SCALE_NOFILTER_NAME(const SkBitmapProcState& s,
     } else
 #endif
     {
+#if defined ( __mips_dsp)
+        register int t1, t2, t3, t4, t5;
+        __asm__ __volatile__ (
+            "addu        %[t1], %[fx], %[dx]          \n\t"         // fx + dx
+            "addu        %[t2], %[dx], %[dx]          \n\t"         //
+            "replv.ph    %[t3], %[maxX]               \n\t"         // maxX || maxX
+            "srl         %[t4], %[count], 1           \n\t"         //
+            "blez        %[t4], 2f                    \n\t"         // check for count <= 0
+            "1:                                       \n\t"
+#ifdef SK_CPU_BENDIAN
+            "precrq.ph.w %[t5], %[fx], %[t1]          \n\t"         // fx || (fx+dx)
+            "cmp.lt.ph   %[t5], $zero                 \n\t"         //
+            "pick.ph     %[t5], $zero, %[t5]          \n\t"         // clamp 0
+            "cmp.lt.ph   %[t3], %[t5]                 \n\t"         //
+            "pick.ph     %[t5], %[t3], %[t5]          \n\t"         // clamp max
+#else
+            "precrq.ph.w %[t5], %[t1], %[fx]          \n\t"         // (fx+dx) || fx
+            "cmp.lt.ph   %[t5], $zero                 \n\t"         //
+            "pick.ph     %[t5], $zero, %[t5]          \n\t"         // clamp 0
+            "cmp.lt.ph   %[t3], %[t5]                 \n\t"         //
+            "pick.ph     %[t5], %[t3], %[t5]          \n\t"         // clamp max
+#endif
+            "sw          %[t5], 0(%[xy])              \n\t"         // store to xy[]
+            "addu        %[fx], %[fx], %[t2]          \n\t"         // fx += 2*dx
+            "addu        %[t1], %[t1], %[t2]          \n\t"         // (fx+dx) += 2*dx
+            "subu        %[t4], %[t4], 1              \n\t"         //
+            "addu        %[xy], %[xy], 4              \n\t"         // xy += 4
+            "bnez        %[t4], 1b                    \n\t"         //
+            "2:                                       \n\t"
+            "and         %[t4], %[count], 1           \n\t"         //
+            "beqz        %[t4], 3f                    \n\t"         //
+            "sra         %[t4], %[fx], 16             \n\t"         //
+            "slt         %[t5], %[t4], $zero          \n\t"         //
+            "movn        %[t4], $zero, %[t5]          \n\t"         // clamp 0
+            "sgt         %[t5], %[t4], %[maxX]        \n\t"         //
+            "movn        %[t4], %[maxX], %[t5]        \n\t"         // clamp maxX
+            "sh          %[t4], 0(%[xy])              \n\t"         //
+            "3:                                       \n\t"
+            : [t1] "=&r" (t1), [t2] "=&r" (t2), [t3] "=&r" (t3), [t4] "=&r" (t4), [t5] "=&r" (t5)
+            : [fx] "r" (fx), [xy] "r" (xy), [count] "r" (count), [dx] "r" (dx), [maxX] "r" (maxX)
+            : "memory"
+        );
+#else
         int i;
         for (i = (count >> 2); i > 0; --i) {
             unsigned a, b;
@@ -75,6 +118,7 @@ void SCALE_NOFILTER_NAME(const SkBitmapProcState& s,
         for (i = (count & 3); i > 0; --i) {
             *xx++ = TILEX_PROCF(fx, maxX); fx += dx;
         }
+#endif // __mips_dsp
     }
 }
 
@@ -236,10 +280,44 @@ void SCALE_FILTER_NAME(const SkBitmapProcState& s,
     } else
 #endif
     {
+#if defined ( __mips_dsp)
+        register int t1, t2, t3, t4, t5;
+        __asm__ __volatile__ (
+            "sll    %[t1], %[count], 2                \n\t"         // count*sizeof(int)
+            "addu   %[t1], %[xy], %[t1]               \n\t"         // final address of xy
+            "1:                                       \n\t"
+            "sra    %[t2], %[fx], 16                  \n\t"         // fx[31..16]
+            "slt    %[t3], %[t2], $zero               \n\t"         //
+            "movn   %[t2], $zero, %[t3]               \n\t"         // clamp 0
+            "sgt    %[t3], %[t2], %[maxX]             \n\t"         //
+            "movn   %[t2], %[maxX], %[t3]             \n\t"         // clamp maxX
+            "ext    %[t4], %[fx], 12, 4               \n\t"         // fx[15..12]
+            "sll    %[t2], %[t2], 4                   \n\t"         //
+            "or     %[t2], %[t2], %[t4]               \n\t"         //
+            "addu   %[t4], %[fx], %[one]              \n\t"         // fx + oneX
+            "sra    %[t5], %[t4], 16                  \n\t"         // (fx + oneX)[31..16]
+            "slt    %[t3], %[t5], $zero               \n\t"         //
+            "movn   %[t5], $zero, %[t3]               \n\t"         // clamp 0
+            "sgt    %[t3], %[t5], %[maxX]             \n\t"         //
+            "movn   %[t5], %[maxX], %[t3]             \n\t"         // clamp maxX
+            "sll    %[t2], %[t2], 14                  \n\t"         //
+            "or     %[t2], %[t2], %[t5]               \n\t"         //
+            "sw     %[t2], 0(%[xy])                   \n\t"         // store to xy[]
+
+            "addu   %[xy], %[xy], 4                   \n\t"         // xy += 4
+            "addu   %[fx], %[fx], %[dx]               \n\t"         // fx += dx
+            "bne    %[xy], %[t1], 1b                  \n\t"         //
+            "2:                                       \n\t"
+            : [t1] "=&r" (t1), [t2] "=&r" (t2), [t3] "=&r" (t3), [t4] "=&r" (t4), [t5] "=&r" (t5)
+            : [fx] "r" (fx), [xy] "r" (xy), [count] "r" (count), [maxX] "r" (maxX), [dx] "r" (dx), [one] "r" (one)
+            : "memory"
+        );
+#else
         do {
             *xy++ = PACK_FILTER_X_NAME(fx, maxX, one PREAMBLE_ARG_X);
             fx += dx;
         } while (--count != 0);
+#endif // __mips_dsp
     }
 }
 
@@ -345,6 +423,67 @@ void PERSP_FILTER_NAME(const SkBitmapProcState& s,
 
     while ((count = iter.next()) != 0) {
         const SkFixed* SK_RESTRICT srcXY = iter.getXY();
+#if defined( __mips_dsp)
+    register int max32, min32;
+    max32 = (maxY << 16) | maxX;
+    min32 = 0;
+    register int t0, t1, t2, t3, t4, t5, t6, t7, t8, t9, t10;
+    __asm__ __volatile__ (
+        "1:                                      \n\t"
+        "addiu       %[count], %[count], -1      \n\t"
+        "bltz        %[count], 2f                \n\t"
+        "lw          %[t1], 4(%[srcXY])          \n\t"
+        "lw          %[t0], 0(%[srcXY])          \n\t"
+        "addiu       %[srcXY], %[srcXY], 8       \n\t"
+        "sra         %[t3], %[oneY], 1           \n\t"
+        "sra         %[t2], %[oneX], 1           \n\t"
+        "subu        %[t5], %[t1], %[t3]         \n\t"  // t5: y1 prepared for clamping
+        "subu        %[t4], %[t0], %[t2]         \n\t"  // t4: x1 prepared for clamping
+        "precrq.ph.w %[t0], %[t5], %[t4]         \n\t"
+        "cmp.le.ph   %[t0], %[max32]             \n\t"
+        "pick.ph     %[t1], %[t0], %[max32]      \n\t"
+        "cmp.le.ph   %[t1], %[min32]             \n\t"
+        "pick.ph     %[t0], %[min32], %[t1]      \n\t"  // t0: clamp_y1 || clamp_x1
+        "addu        %[t7], %[t5], %[oneY]       \n\t"  // t7: y2 prepared for clamping
+        "addu        %[t6], %[t4], %[oneX]       \n\t"  // t6: x2 prepared for clamping
+        "precrq.ph.w %[t1], %[t7], %[t6]         \n\t"
+        "cmp.le.ph   %[t1], %[max32]             \n\t"
+        "pick.ph     %[t2], %[t1], %[max32]      \n\t"
+        "cmp.le.ph   %[t2], %[min32]             \n\t"
+        "pick.ph     %[t1], %[min32], %[t2]      \n\t"  // t1: clamp_y2 || clamp_x2
+
+        "sra         %[t2], %[t5], 12            \n\t"
+        "andi        %[t2], %[t2], 0xF           \n\t"
+        "sra         %[t8], %[t0], 16            \n\t"  // t8: [0..0] || clamp_y1
+        "sra         %[t9], %[t1], 16            \n\t"  // t9: [0..0] || clamp_y2
+        "sll         %[t8], %[t8], 4             \n\t"
+        "or          %[t8], %[t8], %[t2]         \n\t"
+        "sll         %[t8], %[t8], 14            \n\t"
+        "or          %[t10], %[t8], %[t9]        \n\t"
+        "sw          %[t10], 0(%[xy])            \n\t"
+        "addiu       %[xy], %[xy], 4             \n\t"
+
+        "sra         %[t2], %[t4], 12            \n\t"
+        "andi        %[t2], %[t2], 0xF           \n\t"
+        "andi        %[t8], %[t0], 0xFFFF        \n\t"  // t8: [0..0] || clamp_x1
+        "andi        %[t9], %[t1], 0xFFFF        \n\t"  // t9: [0..0] || clamp_x2
+        "sll         %[t8], %[t8], 4             \n\t"
+        "or          %[t8], %[t8], %[t2]         \n\t"
+        "sll         %[t8], %[t8], 14            \n\t"
+        "or          %[t10], %[t8], %[t9]        \n\t"
+        "sw          %[t10], 0(%[xy])            \n\t"
+        "addiu       %[xy], %[xy], 4             \n\t"
+
+        "b           1b                          \n\t"
+        "2:                                      \n\t"
+        : [t0] "+r" (t0), [t1] "+r" (t1), [t2] "+r" (t2), [t3] "+r" (t3),
+          [t4] "+r" (t4), [t5] "+r" (t5), [t6] "+r" (t6), [t7] "+r" (t7), [t8] "+r" (t8),
+          [t9] "+r" (t9), [t10] "=r" (t10), [srcXY] "+r" (srcXY), [count] "+r" (count)
+        : [xy] "r" (xy), [max32] "r" (max32), [min32] "r" (min32), [oneY] "r" (oneY),
+          [oneX] "r" (oneX)
+        : "memory"
+    );
+#else
         do {
             *xy++ = PACK_FILTER_Y_NAME(srcXY[1] - (oneY >> 1), maxY,
                                        oneY PREAMBLE_ARG_Y);
@@ -352,6 +491,7 @@ void PERSP_FILTER_NAME(const SkBitmapProcState& s,
                                        oneX PREAMBLE_ARG_X);
             srcXY += 2;
         } while (--count != 0);
+#endif // __mips_dsp
     }
 }
 
