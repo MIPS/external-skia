@@ -8,6 +8,25 @@
 #define TEST_DUR    101
 
 /*REFERENT FUNCTIONS*/
+static void S32_D565_Blend_referent(uint16_t* SK_RESTRICT dst,
+                             const SkPMColor* SK_RESTRICT src, int count,
+                             U8CPU alpha, int /*x*/, int /*y*/) {
+    SkASSERT(255 > alpha);
+
+    if (count > 0) {
+        int scale = SkAlpha255To256(alpha);
+        do {
+            SkPMColor c = *src++;
+            SkPMColorAssert(c);
+            SkASSERT(SkGetPackedA32(c) == 255);
+            uint16_t d = *dst;
+            *dst++ = SkPackRGB16(
+                    SkAlphaBlend(SkPacked32ToR16(c), SkGetPackedR16(d), scale),
+                    SkAlphaBlend(SkPacked32ToG16(c), SkGetPackedG16(d), scale),
+                    SkAlphaBlend(SkPacked32ToB16(c), SkGetPackedB16(d), scale));
+        } while (--count != 0);
+    }
+}
 static void S32A_D565_Opaque_Dither_referent(uint16_t* SK_RESTRICT dst,
                                       const SkPMColor* SK_RESTRICT src,
                                       int count, U8CPU alpha, int x, int y) {
@@ -41,6 +60,7 @@ static void S32A_D565_Opaque_Dither_referent(uint16_t* SK_RESTRICT dst,
         } while (--count != 0);
     }
 }
+
 static void S32_D565_Opaque_Dither_referent(uint16_t* __restrict__ dst,
                                      const SkPMColor* __restrict__ src,
                                      int count, U8CPU alpha, int x, int y) {
@@ -145,6 +165,38 @@ static void S32_Blend_BlitRow32_referent(SkPMColor* SK_RESTRICT dst,
 }
 
 /*TEST FUNCTIONS*/
+static void test_S32_D565_Blend(skiatest::Reporter* reporter) {
+
+SkBlitRow::Proc proc = NULL;
+proc = SkBlitRow::Factory(1, SkBitmap::kRGB_565_Config); //were calling S32_D565_Blend_PROC
+
+    int count_xy = 10;
+    uint16_t dst[TEST_DUR];
+    uint16_t dst_opt[TEST_DUR];
+    SkPMColor src[TEST_DUR];
+    U8CPU alpha;
+    alpha = 253;
+    int x, y, r;
+    SkRandom rand;
+    SkString str;
+
+    for (int j = 0; j < count_xy; j++) {
+      for (int i = 0; i < 2; i++ ) {
+        src[i] = static_cast<SkPMColor>(rand.nextU());
+      }
+      x = static_cast<int>(rand.nextU());
+      y = static_cast<int>(rand.nextU());
+      memset(dst, 0, TEST_DUR * 2);
+      memset(dst_opt, 0, TEST_DUR * 2);
+      proc(dst_opt, src, TEST_DUR, alpha, x, y);
+      S32_D565_Blend_referent(dst, src, TEST_DUR, alpha, x, y);
+
+      if ( memcmp((void*)dst, (void*)dst_opt, TEST_DUR * 2)!=0 ) {
+        str.printf("test_S32_D565_Blend ERROR!\nalpha: %X\n", alpha);
+        reporter->reportFailed(str);
+      }
+    }
+}
 static void test_S32A_D565_Opaque_Dither(skiatest::Reporter* reporter) {
     SkBlitRow::Proc proc = NULL;
     proc = SkBlitRow::Factory(6, SkBitmap::kRGB_565_Config); //were calling S32A_D565_Opaque_Dither_PROC
@@ -190,7 +242,6 @@ static void test_S32_D565_Opaque_Dither(skiatest::Reporter* reporter) {
     int x, y, r;
     SkRandom rand;
     SkString str;
-
     for (int j = 0; j < count_xy; j++) {
       for (int i = 0; i < TEST_DUR; i++ ) {
         src[i] = static_cast<SkPMColor>(rand.nextU());
@@ -341,7 +392,7 @@ static void test_S32_Blend_BlitRow32(skiatest::Reporter* reporter) {
 
 //RUN SOME TESTS:
 static void test_S32(skiatest::Reporter* reporter) {
-
+    test_S32_D565_Blend(reporter);
     test_S32A_D565_Opaque_Dither(reporter);
     test_S32_D565_Opaque_Dither(reporter);
     test_S32A_D565_Opaque(reporter);
