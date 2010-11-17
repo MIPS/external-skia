@@ -276,7 +276,7 @@ void SCALE_FILTER_NAME(const SkBitmapProcState& s,
     } else
 #endif
     {
-#if defined ( __mips_dsp)
+#if defined ( __mips__)
         register int t1, t2, t3, t4, t5;
         __asm__ __volatile__ (
         "sll  %[t1], %[count], 2                  \n\t"         // count*sizeof(int)
@@ -307,8 +307,8 @@ void SCALE_FILTER_NAME(const SkBitmapProcState& s,
             *xy++ = PACK_FILTER_X_NAME(fx, maxX, one PREAMBLE_ARG_X);
             fx += dx;
         } while (--count != 0);
+#endif // __mips__
     }
-#endif // __mips_dsp
 }
 
 void AFFINE_FILTER_NAME(const SkBitmapProcState& s,
