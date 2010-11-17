@@ -64,17 +64,13 @@ void SCALE_NOFILTER_NAME(const SkBitmapProcState& s,
             "1:                                       \n\t"
 #ifdef SK_CPU_BENDIAN
             "precrq.ph.w %[t5], %[fx], %[t1]          \n\t"         // fx || (fx+dx)
-            "cmp.lt.ph   %[t5], $zero                 \n\t"         //
-            "pick.ph     %[t5], $zero, %[t5]          \n\t"         // clamp 0
-            "cmp.lt.ph   %[t3], %[t5]                 \n\t"         //
-            "pick.ph     %[t5], %[t3], %[t5]          \n\t"         // clamp max
 #else
             "precrq.ph.w %[t5], %[t1], %[fx]          \n\t"         // (fx+dx) || fx
+#endif
             "cmp.lt.ph   %[t5], $zero                 \n\t"         //
             "pick.ph     %[t5], $zero, %[t5]          \n\t"         // clamp 0
             "cmp.lt.ph   %[t3], %[t5]                 \n\t"         //
             "pick.ph     %[t5], %[t3], %[t5]          \n\t"         // clamp max
-#endif
             "sw          %[t5], 0(%[xy])              \n\t"         // store to xy[]
             "addu        %[fx], %[fx], %[t2]          \n\t"         // fx += 2*dx
             "addu        %[t1], %[t1], %[t2]          \n\t"         // (fx+dx) += 2*dx
