@@ -320,19 +320,30 @@ static void S32_D565_Opaque_Dither_mips(uint16_t* __restrict__ dst,
         "precrq.ph.w    %[t3], %[t0], %[t2]      \n\t"      // t3 = r1|g1|r2|g2
         "preceu.ph.qbla %[t4], %[t3]             \n\t"      // t4 = 0|r1|0|r2       R
         "preceu.ph.qbra %[t5], %[t3]             \n\t"      // t5 = 0|g1|0|g2       G
+  #ifdef __mips_dspr2
+        "append         %[t0], %[t2], 16         \n\t"
+        "preceu.ph.qbla %[t9], %[t0]             \n\t"      // t9 = 0|b1|0|b2       B
+  #else
         "sll            %[t6], %[t0], 16         \n\t"      // t6 = b1|a1|0|0
         "sll            %[t7], %[t2], 16         \n\t"      // t7 = b2|a2|0|0
         "precrq.ph.w    %[t8], %[t6], %[t7]      \n\t"      // t8 = b1|a1|b2|a2
         "preceu.ph.qbla %[t9], %[t8]             \n\t"      // t9 = 0|b1|0|b2       B
+  #endif
 #else
         // LE: a|b|g|r
         "precrq.ph.w    %[t3], %[t0], %[t2]      \n\t"      // t3 = a1|b1|a2|b2
         "preceu.ph.qbra %[t9], %[t3]             \n\t"      // t9 = 0|b1|0|b2       B
+  #ifdef __mips_dspr2
+        "append         %[t0], %[t2], 16         \n\t"
+        "preceu.ph.qbra %[t4], %[t0]             \n\t"      // 0|r1|0|r2
+        "preceu.ph.qbla %[t5], %[t0]             \n\t"      // 0|g1|0|g2       G
+  #else
         "sll            %[t6], %[t0], 16         \n\t"      // t6 = g1|r1|0|0
         "sll            %[t7], %[t2], 16         \n\t"      // t7 = g2|r2|0|0
         "precrq.ph.w    %[t8], %[t6], %[t7]      \n\t"      // t8 = g1|r1|g2|r2
         "preceu.ph.qbra %[t4], %[t8]             \n\t"      // t9 = 0|r1|0|r2       R
         "preceu.ph.qbla %[t5], %[t8]             \n\t"      // t5 = 0|g1|0|g2       G
+  #endif
 #endif
         "addu.qb        %[t0], %[t4], %[t1]      \n\t"
         "shra.ph        %[t2], %[t4], 5          \n\t"
@@ -350,9 +361,13 @@ static void S32_D565_Opaque_Dither_mips(uint16_t* __restrict__ dst,
         "shra.ph        %[t8], %[t4], 2          \n\t"      // t8 = 0|g1|0|g2 calculated G
 
         "precrq.ph.w    %[t0], %[t6], %[t7]      \n\t"      // t0 = 0|r1|0|b1 calculated
-        "sll            %[t1], %[t6], 16         \n\t"
+  #ifdef __mips_dspr2
+        "append         %[t6], %[t7], 16         \n\t"
+  #else
+        "sll            %[t6], %[t6], 16         \n\t"
         "sll            %[t2], %[t7], 16         \n\t"
-        "precrq.ph.w    %[t3], %[t1], %[t2]      \n\t"      // t3 = 0|r2|0|b2 calculated
+        "precrq.ph.w    %[t6], %[t6], %[t2]      \n\t"      // 0|r2|0|b2 calculated
+  #endif
         "sra            %[t4], %[t8], 16         \n\t"      // t4 = 0|0|0|g1 calculated
         "andi           %[t5], %[t8], 0xFF       \n\t"      // t5 = 0|0|0|g2 calculated
 
@@ -363,9 +378,9 @@ static void S32_D565_Opaque_Dither_mips(uint16_t* __restrict__ dst,
         "andi           %[t11], %[t10], 0xFFFF   \n\t"
 
         "sll            %[t7], %[t5], 5          \n\t"      // g2 on place
-        "sra            %[t8], %[t3], 5          \n\t"      // r2 on place (b2 removed from register, set to zero)
+        "sra            %[t8], %[t6], 5          \n\t"      // r2 on place (b2 removed from register, set to zero)
         "or             %[t9], %[t7], %[t8]      \n\t"
-        "or             %[t10], %[t9], %[t3]     \n\t"
+        "or             %[t10], %[t9], %[t6]     \n\t"
         "and            %[t12], %[t10], 0xFFFF   \n\t"
 
         "sh             %[t11], 0(%[dst])        \n\t"
@@ -440,27 +455,28 @@ static void S32_D565_Blend_Dither_mips(uint16_t* dst,
             "ble              %[count1], %[t14], 3f      	\n\t"
             "lw               %[t7], 0(%[src1])                \n\t"
             "lw               %[t8], 4(%[src1])                \n\t"
-            "lh               %[t9], 0(%[dst1])                \n\t"
-            "lh               %[t10], 2(%[dst1])               \n\t"
-            "sll              %[t10], %[t10], 16               \n\t"
 
             "bne              %[x1], $0, 4f        	 	\n\t"
-            "lw               %[t1], 0(%[dither])               \n\t"
+            "lw               %[t0], 0(%[dither])               \n\t"
             "lw               %[t2], 4(%[dither])               \n\t"
             "li               %[x1], 1                          \n\t"
             "b                5f                   		\n\t"
             "4:                                    		\n\t"
-            "lw               %[t1], 8(%[dither])              \n\t"
+            "lw               %[t0], 8(%[dither])              \n\t"
             "lw               %[t2], 12(%[dither])             \n\t"
             "li              %[x1], 0                          \n\t"
             "5:                   		               \n\t"
 
-            "sll              %[t3], %[t1], 7                  \n\t"
+            "sll              %[t3], %[t0], 7                  \n\t"
             "sll              %[t4], %[t2], 7                  \n\t"
 
-            "sll              %[t1], %[t1], 8                  \n\t"    // t1 = dither1 << 8;
+  #ifdef __mips_dspr2
+            "append           %[t0], %[t2], 16                 \n\t"    // 
+  #else
+            "sll              %[t1], %[t0], 8                  \n\t"    // t1 = dither1 << 8;
             "sll              %[t2], %[t2], 8                  \n\t"    // t2 = dither2 << 8;
             "precrq.qb.ph     %[t0], %[t1], %[t2]              \n\t"    // t0 = 0|dither1|0|dither2
+  #endif
             "precrq.qb.ph     %[t1], %[t3], %[t4]              \n\t"    // t1 = 0|dither3|0|dither4
 #ifdef SK_CPU_BENDIAN
             // BE: r|g|b|a
@@ -472,7 +488,6 @@ static void S32_D565_Blend_Dither_mips(uint16_t* dst,
             "preceu.ph.qbra   %[t5], %[t4]                     \n\t"    // t5 = 0x00B100B2
             "preceu.ph.qbla   %[t4], %[t4]                     \n\t"    // t4 = 0x00R100R2
             "preceu.ph.qbla   %[t6], %[t6]                     \n\t"    // t6 = 0x00G100G2
-            "packrl.ph        %[t2], %[t9], %[t10]             \n\t"    // t2 = dst1|dst1|dst2|dst2
 #else
             // LE: a|b|g|r
             "sll              %[t5], %[t7], 8                  \n\t"
@@ -482,8 +497,15 @@ static void S32_D565_Blend_Dither_mips(uint16_t* dst,
             "preceu.ph.qbla   %[t5], %[t4]                     \n\t"    // t5 = 0x00B100B2
             "preceu.ph.qbra   %[t4], %[t4]                     \n\t"    // t4 = 0x00R100R2
             "preceu.ph.qbra   %[t6], %[t6]                     \n\t"    // t6 = 0x00G100G2
-            "packrl.ph        %[t2], %[t9], %[t10]             \n\t"    // t2 = dst1|dst1|dst2|dst2
 #endif
+            "lh               %[t2], 0(%[dst1])                \n\t"
+            "lh               %[t10], 2(%[dst1])               \n\t"
+  #ifdef __mips_dspr2
+            "append           %[t2], %[t10], 16                \n\t"    // 
+  #else
+            "sll              %[t10], %[t10], 16               \n\t"
+            "packrl.ph        %[t2], %[t2], %[t10]             \n\t"    // t2 = dst1|dst1|dst2|dst2
+  #endif
             "shra.ph          %[t11], %[t2], 11                \n\t"    // r1,r2 = d1,d2>>11
             "and              %[t11], %[t11], 0x1F001F         \n\t"    // b = d & 0x1F001F
             "shra.ph          %[t12], %[t2], 5                 \n\t"    // g1,g2 = d>>5 & 0x3F
@@ -598,20 +620,28 @@ static void S32A_D565_Opaque_mips(uint16_t* __restrict__ dst,
         "precrq.ph.w    %[t2], %[t0], %[t1]       \n\t"  // t2 = r1|g1|r2|g2
         "preceu.ph.qbla %[t3], %[t2]              \n\t"  // t3 = 0|r1|0|r2       SR
         "preceu.ph.qbra %[t4], %[t2]              \n\t"  // t4 = 0|g1|0|g2       SG
-        "sll            %[t5], %[t0], 16          \n\t"  // t5 = b1|a1|0|0
-        "sll            %[t6], %[t1], 16          \n\t"  // t6 = b2|a2|0|0
-        "precrq.ph.w    %[t7], %[t5], %[t6]       \n\t"  // t7 = b1|a1|b2|a2
-        "preceu.ph.qbla %[t8], %[t7]              \n\t"  // t8 = 0|b1|0|b2       SB
-        "preceu.ph.qbra %[t0], %[t7]              \n\t"  // t0 = 0|a1|0|a2
+  #ifdef __mips_dspr2
+        "append         %[t0], %[t1], 16          \n\t"  // b1|a1|b2|a2
+  #else
+        "sll            %[t0], %[t0], 16          \n\t"  // b1|a1|0|0
+        "sll            %[t6], %[t1], 16          \n\t"  // b2|a2|0|0
+        "precrq.ph.w    %[t0], %[t0], %[t6]       \n\t"  // b1|a1|b2|a2
+  #endif
+        "preceu.ph.qbla %[t8], %[t0]              \n\t"  // t8 = 0|b1|0|b2       SB
+        "preceu.ph.qbra %[t0], %[t0]              \n\t"  // t0 = 0|a1|0|a2
 #else
         // LE: a|b|g|r
         "precrq.ph.w    %[t2], %[t0], %[t1]       \n\t"  // t2 = a1|b1|a2|b2
         "preceu.ph.qbra %[t8], %[t2]              \n\t"  // t8 = 0|b1|0|b2       SB
-        "sll            %[t5], %[t0], 16          \n\t"  // t5 = g1|r1|0|0
-        "sll            %[t6], %[t1], 16          \n\t"  // t6 = g2|r2|0|0
-        "precrq.ph.w    %[t7], %[t5], %[t6]       \n\t"  // t7 = g1|r1|g2|r2
-        "preceu.ph.qbra %[t3], %[t7]              \n\t"  // t3 = 0|r1|0|r2       SR
-        "preceu.ph.qbla %[t4], %[t7]              \n\t"  // t4 = 0|g1|0|g2       SG
+  #ifdef __mips_dspr2
+        "append         %[t0], %[t1], 16          \n\t"  // g1|r1|g2|r2
+  #else
+        "sll            %[t0], %[t0], 16          \n\t"  // g1|r1|0|0
+        "sll            %[t6], %[t1], 16          \n\t"  // g2|r2|0|0
+        "precrq.ph.w    %[t0], %[t0], %[t6]       \n\t"  // g1|r1|g2|r2
+  #endif
+        "preceu.ph.qbra %[t3], %[t0]              \n\t"  // t3 = 0|r1|0|r2       SR
+        "preceu.ph.qbla %[t4], %[t0]              \n\t"  // t4 = 0|g1|0|g2       SG
         "preceu.ph.qbla %[t0], %[t2]              \n\t"  // t0 = 0|a1|0|a2
 #endif // SK_CPU_BENDIAN
         "subq.ph        %[t1], %[sa], %[t0]       \n\t"  // t1 = 0|255-sa1|0|255-sa2
@@ -621,9 +651,13 @@ static void S32A_D565_Opaque_mips(uint16_t* __restrict__ dst,
 
         "lh             %[t0], 0(%[dst])          \n\t"  // t0 = ffff||r1g1b1_565
         "lh             %[t1], 2(%[dst])          \n\t"  // t1 = ffff||r2g2b2_565
-        "sll            %[t5], %[t0], 16          \n\t"  // t1 = r1g1b1_565||0
         "and            %[t1], %[t1], 0xffff      \n\t"
+  #ifdef __mips_dspr2
+        "append         %[t0], %[t1], 16          \n\t"  // r1g1b1_565||r2g2b2_565
+  #else
+        "sll            %[t5], %[t0], 16          \n\t"  // t1 = r1g1b1_565||0
         "or             %[t0], %[t5], %[t1]       \n\t"  // t0 = r1g1b1_565||r2g2b2_565
+  #endif
         "and            %[t1], %[t0], 0x1f001f    \n\t"  // t1 = 0|db1|0|db2 (on place and extracted)    DB
         "shra.ph        %[t6], %[t0], 11          \n\t"  // t6 = 0|dr1|0|dr2 (on place and extracted)    DR
         "and            %[t6], %[t6], 0x1f001f    \n\t"
