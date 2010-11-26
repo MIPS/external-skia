@@ -288,8 +288,12 @@ void SCALE_FILTER_NAME(const SkBitmapProcState& s,
             "sgt    %[t3], %[t2], %[maxX]             \n\t"         //
             "movn   %[t2], %[maxX], %[t3]             \n\t"         // clamp maxX
             "ext    %[t4], %[fx], 12, 4               \n\t"         // fx[15..12]
+#ifdef __mips_dspr2
+            "append %[t2], %[t4], 4                   \n\t"         //
+#else
             "sll    %[t2], %[t2], 4                   \n\t"         //
             "or     %[t2], %[t2], %[t4]               \n\t"         //
+#endif
             "addu   %[t4], %[fx], %[one]              \n\t"         // fx + oneX
             "sra    %[t5], %[t4], 16                  \n\t"         // (fx + oneX)[31..16]
             "slt    %[t3], %[t5], $zero               \n\t"         //
@@ -351,8 +355,12 @@ void AFFINE_FILTER_NAME(const SkBitmapProcState& s,
         "sgt %[t3], %[t2], %[maxY]                \n\t"         //
         "movn %[t2], %[maxY], %[t3]               \n\t"         // clamp maxY
         "ext %[t4], %[fy], 12, 4                  \n\t"         // fy[15..12]
+#ifdef __mips_dspr2
+        "append %[t2], %[t4], 4                   \n\t"         //
+#else
         "sll %[t2], %[t2], 4                      \n\t"         //
         "or %[t2], %[t2], %[t4]                   \n\t"         //
+#endif
         "addu %[t4], %[fy], %[oneY]               \n\t"         // fy + oneY
         "sra %[t5], %[t4], 16                     \n\t"         // (fy + oneY)[31..16]
         "slt %[t3], %[t5], $zero                  \n\t"         //
@@ -369,8 +377,12 @@ void AFFINE_FILTER_NAME(const SkBitmapProcState& s,
         "sgt %[t3], %[t2], %[maxX]                \n\t"         //
         "movn %[t2], %[maxX], %[t3]               \n\t"         // clamp maxX
         "ext %[t4], %[fx], 12, 4                  \n\t"         // fx[15..12]
+#ifdef __mips_dspr2
+        "append %[t2], %[t4], 4                   \n\t"         //
+#else
         "sll %[t2], %[t2], 4                      \n\t"         //
         "or %[t2], %[t2], %[t4]                   \n\t"         //
+#endif
         "addu %[t4], %[fx], %[oneX]               \n\t"         // fx + oneX
         "sra %[t5], %[t4], 16                     \n\t"         // (fx + oneX)[31..16]
         "slt %[t3], %[t5], $zero                  \n\t"         //
@@ -425,16 +437,16 @@ void PERSP_FILTER_NAME(const SkBitmapProcState& s,
     min32 = 0;
     register int t0, t1, t2, t3, t4, t5, t6, t7, t8, t9, t10;
     __asm__ __volatile__ (
+        "sra         %[t3], %[oneY], 1           \n\t"
+        "sra         %[t10], %[oneX], 1          \n\t"
         "1:                                      \n\t"
         "addiu       %[count], %[count], -1      \n\t"
         "bltz        %[count], 2f                \n\t"
         "lw          %[t1], 4(%[srcXY])          \n\t"
         "lw          %[t0], 0(%[srcXY])          \n\t"
         "addiu       %[srcXY], %[srcXY], 8       \n\t"
-        "sra         %[t3], %[oneY], 1           \n\t"
-        "sra         %[t2], %[oneX], 1           \n\t"
         "subu        %[t5], %[t1], %[t3]         \n\t"  // t5: y1 prepared for clamping
-        "subu        %[t4], %[t0], %[t2]         \n\t"  // t4: x1 prepared for clamping
+        "subu        %[t4], %[t0], %[t10]        \n\t"  // t4: x1 prepared for clamping
         "precrq.ph.w %[t0], %[t5], %[t4]         \n\t"
         "cmp.le.ph   %[t0], %[max32]             \n\t"
         "pick.ph     %[t1], %[t0], %[max32]      \n\t"
@@ -452,29 +464,36 @@ void PERSP_FILTER_NAME(const SkBitmapProcState& s,
         "andi        %[t2], %[t2], 0xF           \n\t"
         "sra         %[t8], %[t0], 16            \n\t"  // t8: [0..0] || clamp_y1
         "sra         %[t9], %[t1], 16            \n\t"  // t9: [0..0] || clamp_y2
+#ifdef __mips_dspr2
+        "append      %[t8], %[t2], 4                  \n\t"
+#else
         "sll         %[t8], %[t8], 4             \n\t"
         "or          %[t8], %[t8], %[t2]         \n\t"
+#endif
         "sll         %[t8], %[t8], 14            \n\t"
-        "or          %[t10], %[t8], %[t9]        \n\t"
-        "sw          %[t10], 0(%[xy])            \n\t"
-        "addiu       %[xy], %[xy], 4             \n\t"
+        "or          %[t6], %[t8], %[t9]         \n\t"
+        "sw          %[t6], 0(%[xy])             \n\t"
 
         "sra         %[t2], %[t4], 12            \n\t"
         "andi        %[t2], %[t2], 0xF           \n\t"
         "andi        %[t8], %[t0], 0xFFFF        \n\t"  // t8: [0..0] || clamp_x1
         "andi        %[t9], %[t1], 0xFFFF        \n\t"  // t9: [0..0] || clamp_x2
+#ifdef __mips_dspr2
+        "append      %[t8], %[t2], 4                  \n\t"
+#else
         "sll         %[t8], %[t8], 4             \n\t"
         "or          %[t8], %[t8], %[t2]         \n\t"
+#endif
         "sll         %[t8], %[t8], 14            \n\t"
-        "or          %[t10], %[t8], %[t9]        \n\t"
-        "sw          %[t10], 0(%[xy])            \n\t"
-        "addiu       %[xy], %[xy], 4             \n\t"
+        "or          %[t6], %[t8], %[t9]         \n\t"
+        "sw          %[t6], 4(%[xy])             \n\t"
+        "addiu       %[xy], %[xy], 8             \n\t"
 
         "b           1b                          \n\t"
         "2:                                      \n\t"
         : [t0] "+r" (t0), [t1] "+r" (t1), [t2] "+r" (t2), [t3] "+r" (t3),
           [t4] "+r" (t4), [t5] "+r" (t5), [t6] "+r" (t6), [t7] "+r" (t7), [t8] "+r" (t8),
-          [t9] "+r" (t9), [t10] "=r" (t10), [srcXY] "+r" (srcXY), [count] "+r" (count)
+          [t9] "+r" (t9), [t10] "=&r" (t10), [srcXY] "+r" (srcXY), [count] "+r" (count)
         : [xy] "r" (xy), [max32] "r" (max32), [min32] "r" (min32), [oneY] "r" (oneY),
           [oneX] "r" (oneX)
         : "memory"
