@@ -3,14 +3,16 @@ LOCAL_PATH:= $(call my-dir)
 include $(CLEAR_VARS)
 
 LOCAL_SRC_FILES := \
-	BitmapBench.cpp \
-    DecodeBench.cpp \
-    FPSBench.cpp \
-	RectBench.cpp \
-	RepeatTileBench.cpp \
-	TextBench.cpp \
+  BlitBench.cpp \
 	SkBenchmark.cpp \
 	benchmain.cpp
+# 	BitmapBench.cpp \
+#  FPSBench.cpp \
+# 	RepeatTileBench.cpp \
+#  TestBench.cpp \
+#  DecodeBench.cpp \
+#	RectBench.cpp \
+#	TextBench.cpp \
 
 # additional optional class for this tool
 LOCAL_SRC_FILES += \
