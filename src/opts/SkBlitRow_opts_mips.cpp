@@ -15,7 +15,7 @@ static void S32_D565_Blend_mips(uint16_t* SK_RESTRICT dst,
 		"or %[s4], %[s4], %[alpha]		\n\t"
 		"repl.ph %[s5], 0x1f			\n\t"
 		"repl.ph %[s6], 0x3f			\n\t"
-		"repl.ph %[s7], 0x3f			\n\t"
+		"repl.ph %[s7], 0xff			\n\t"
 		"1:					\n\t"
 		"lw	%[s2], 0(%[src])		\n\t"
 		"lw	%[s3], 4(%[src])		\n\t"
@@ -25,32 +25,48 @@ static void S32_D565_Blend_mips(uint16_t* SK_RESTRICT dst,
 		"and	%[t1], %[s0], %[s5]		\n\t"/*Get two blues from two Dst pixels*/
 		"shra.ph %[t0], %[s0], 5		\n\t"/*Get two greens from two Dst pixels*/
 		"and	%[t2], %[t0], %[s6]		\n\t"
+  #if __mips_dspr2
+		"shrl.ph %[t3], %[s0], 11		\n\t"
+  #else
 		"shra.ph %[t0], %[s0], 11		\n\t"/*Get two reds from two Dst pixels*/
 		"and	%[t3], %[t0], %[s5]		\n\t"
+  #endif /* (__mips_dspr2) */
 		"precrq.ph.w %[t0], %[s3], %[s2]	\n\t"
 		"shrl.qb %[t5], %[t0], 3		\n\t"
 		"and	%[t4], %[t5], %[s5]		\n\t"/*t4 has two blues from src*/
 		"ins	%[s2], %[s3], 16, 16		\n\t"
 		"and	%[t0], %[s2], %[s7]		\n\t"
 		"shrl.qb %[t6], %[t0], 3		\n\t"/*t6 has got two reds from src*/
+  #if __mips_dspr2
+		"shrl.ph %[t5], %[s2], 10		\n\t"
+  #else
 		"shra.ph %[t0], %[s2], 10		\n\t"
 		"and	%[t5], %[t0], %[s6]		\n\t"/*t5 has got two greens from src*/
-#else
+  #endif  /* (__mips_dspr2) */
+#else  /* SK_CPU_LENDIAN */
 		"lwl	%[s0], 0(%[dst])		\n\t"
 		"lwr	%[s0], 3(%[dst])		\n\t"
 		"and    %[t3], %[s0], %[s5]		\n\t"/*Get two reds from two Dst pixels*/
 		"shra.ph %[t0], %[s0], 5                \n\t"/*Get two greens from two Dst pixels*/
 		"and    %[t2], %[t0], %[s6]		\n\t"
+  #ifdef __mips_dspr2
+		"shrl.ph %[t1], %[s0], 11		\n\t"
+  #else
 		"shra.ph %[t0], %[s0], 11               \n\t"/*Get two blues from two Dst pixels*/
 		"and    %[t1], %[t0], %[s5]		\n\t"
+  #endif /* (__mips_dspr2) */
 		"precrq.ph.w %[t0], %[s3], %[s2]	\n\t"
 		"shrl.qb %[t4], %[t0], 2		\n\t"
 		"and	%[t5], %[t4], %[s6]		\n\t"/*t5 has two greens from src*/
 		"ins    %[s2], %[s3], 16, 16            \n\t"
 		"shra.ph %[t4], %[t0], 11		\n\t"/*t6 has got two reds from src*/
 		"and	%[t6], %[t4], %[s5]		\n\t"
+  #ifdef __mips_dspr2
+		"shrl.ph %[t4], %[s2], 11               \n\t"
+  #else
 		"shra.ph %[t0], %[s2], 11		\n\t"
 		"and    %[t4], %[t0], %[s5]	        \n\t"/*t4 has two blues from src*/
+  #endif /* (__mips_dspr2) */
 #endif
 		"subu.qb	%[t7], %[t4], %[t1]	\n\t"
 		"subu.qb	%[t8], %[t5], %[t2]	\n\t"

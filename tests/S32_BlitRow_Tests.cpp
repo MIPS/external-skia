@@ -181,7 +181,7 @@ proc = SkBlitRow::Factory(1, SkBitmap::kRGB_565_Config); //were calling S32_D565
     SkString str;
 
     for (int j = 0; j < count_xy; j++) {
-      for (int i = 0; i < 2; i++ ) {
+      for (int i = 0; i < TEST_DUR; i++ ) {
         src[i] = static_cast<SkPMColor>(rand.nextU());
       }
       x = static_cast<int>(rand.nextU());
