@@ -255,7 +255,7 @@ endif
 
 endif
 
-ifeq ($TARGET_ARCH),mips)
+ifeq ($(TARGET_ARCH),mips)
 ifneq ($(ARCH_MIPS_HAVE_FPU),true)
 	LOCAL_CFLAGS += -DSK_SOFTWARE_FLOAT
 endif

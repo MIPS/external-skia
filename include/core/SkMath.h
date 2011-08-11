@@ -129,7 +129,7 @@ static inline unsigned SkClampUMax(unsigned value, unsigned max) {
 
 ///////////////////////////////////////////////////////////////////////////////
 
-#if (defined(__arm__) && !defined(__thumb__)) || (defined(__mips__))
+#if (defined(__arm__) && !defined(__thumb__)) || defined(__mips__)
     #define SkCLZ(x)    __builtin_clz(x)
 #endif
 
@@ -181,7 +181,7 @@ static inline int SkNextLog2(uint32_t value) {
             );
         return product;
     }
-#elif defined(__mips__)
+#elif defined(__mips__) && !defined(__mips16)
 	static inline int32_t SkMulS16(S16CPU x, S16CPU y) {
         SkASSERT((int16_t)x == x);
         SkASSERT((int16_t)y == y);

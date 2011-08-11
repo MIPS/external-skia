@@ -235,7 +235,7 @@ inline bool SkFixedNearlyZero(SkFixed x, SkFixed tolerance = SK_FixedNearlyZero)
     #define SkFloatToFixed(x)  SkFloatToFixed_arm(x)
 #endif
 
-#if defined (__mips__)
+#if defined (__mips__) && !defined(__mips16)
     /* This guy does not handle NaN or other obscurities, but is faster than
        than (int)(x*65536) when we only have software floats
     */

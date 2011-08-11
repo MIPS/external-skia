@@ -276,7 +276,7 @@ void SCALE_FILTER_NAME(const SkBitmapProcState& s,
     } else
 #endif
     {
-#if defined ( __mips__)
+#if defined ( __mips__) && !defined (__mips16)
         register int t1, t2, t3, t4, t5;
         __asm__ __volatile__ (
         "sll  %[t1], %[count], 2                  \n\t"         // count*sizeof(int)
@@ -333,7 +333,7 @@ void AFFINE_FILTER_NAME(const SkBitmapProcState& s,
     unsigned maxX = s.fBitmap->width() - 1;
     unsigned maxY = s.fBitmap->height() - 1;
 
-#if defined ( __mips__)
+#if defined ( __mips__) && !defined(__mips16)
     register int t1, t2, t3, t4, t5, t6;
     __asm__ __volatile__ (
         "sll    %[t1], %[count], 3                \n\t"         // count*2*sizeof(int)

@@ -58,8 +58,12 @@ private:
     Proc        fProc;
     State       fState;
     uint32_t    fFlags;
-    
+
+#if defined(__mips16)
+    void __attribute__((nomips16)) setup(const SkScalar array[20]);
+#else
     void setup(const SkScalar array[20]);
+#endif
     
     typedef SkColorFilter INHERITED;
 };
