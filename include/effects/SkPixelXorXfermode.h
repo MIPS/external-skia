@@ -26,7 +26,7 @@
 */
 class SkPixelXorXfermode : public SkXfermode {
 public:
-    SkPixelXorXfermode(SkColor opColor) : fOpColor(opColor) {}
+    SkPixelXorXfermode(SkColor opColor);
 
     // override from SkFlattenable
     virtual Factory getFactory();
@@ -38,6 +38,7 @@ protected:
 
 private:
     SkColor fOpColor;
+    SkPMColor fOpPMColor;
 
     SkPixelXorXfermode(SkFlattenableReadBuffer& rb);
     // our private factory
