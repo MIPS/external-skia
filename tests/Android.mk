@@ -23,6 +23,7 @@ LOCAL_SRC_FILES:= \
   DrawTextTest.cpp \
   EmptyPathTest.cpp \
   FillPathTest.cpp \
+  Filter32_Tests.cpp \
   FlateTest.cpp \
   FontHostTest.cpp \
   GeometryTest.cpp \
@@ -30,6 +31,7 @@ LOCAL_SRC_FILES:= \
   GLProgramsTest.cpp \
   InfRectTest.cpp \
   MathTest.cpp \
+  MatrixProcsTest.cpp \
   MatrixTest.cpp \
   Matrix44Test.cpp \
   MemsetTest.cpp \
