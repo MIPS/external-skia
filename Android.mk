@@ -31,6 +31,8 @@ LOCAL_PATH:= $(call my-dir)
 
 include $(CLEAR_VARS)
 
+ifeq ($(TARGET_ARCH),arm)
+
 LOCAL_ARM_MODE := arm
 
 # need a flag to tell the C side when we're on devices with large memory
@@ -45,6 +47,13 @@ endif
 
 ifeq ($(ARCH_ARM_HAVE_NEON),true)
 	LOCAL_CFLAGS += -D__ARM_HAVE_NEON
+endif
+endif
+
+ifeq ($(TARGET_ARCH),mips)
+ifneq ($(ARCH_MIPS_HAVE_FPU),true)
+	LOCAL_CFLAGS += -DSK_SOFTWARE_FLOAT
+endif
 endif
 
 LOCAL_SRC_FILES:= \
