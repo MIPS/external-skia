@@ -272,9 +272,16 @@ LOCAL_SRC_FILES += \
 	src/opts/memset.arm.S \
 	src/opts/SkBitmapProcState_opts_arm.cpp \
 	src/opts/SkBlitRow_opts_arm.cpp
-else
+endif
+ifeq ($(TARGET_ARCH),x86)
 LOCAL_SRC_FILES += \
 	src/opts/SkBlitRow_opts_none.cpp \
+	src/opts/SkBitmapProcState_opts_none.cpp \
+	src/opts/SkUtils_opts_none.cpp
+endif
+ifeq ($(TARGET_ARCH),mips)
+LOCAL_SRC_FILES += \
+	src/opts/SkBlitRow_opts_mips.cpp \
 	src/opts/SkBitmapProcState_opts_none.cpp \
 	src/opts/SkUtils_opts_none.cpp
 endif

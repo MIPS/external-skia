@@ -49,6 +49,7 @@ LOCAL_SRC_FILES:= \
   ReadPixelsTest.cpp \
   RefDictTest.cpp \
   RegionTest.cpp \
+  S32_BlitRow_Tests.cpp \
   ScalarTest.cpp \
   ShaderOpacityTest.cpp \
   Sk64Test.cpp \
