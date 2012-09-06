@@ -7,6 +7,7 @@ LOCAL_SRC_FILES := \
   BenchSysTimer_posix.cpp \
   BenchTimer.cpp \
   BitmapBench.cpp \
+  BitmapProcStateBench.cpp \
   BlitBench.cpp \
   DecodeBench.cpp \
   FPSBench.cpp \

@@ -6,6 +6,8 @@ LOCAL_ARM_MODE := arm
 LOCAL_SRC_FILES:= \
   BitmapCopyTest.cpp \
   BitmapGetColorTest.cpp \
+  BitmapProcStateTest.cpp \
+  Blitter_RGB16Test.cpp \
   BlitRowTest.cpp \
   ClampRangeTest.cpp \
   ClipCubicTest.cpp \

@@ -37,13 +37,11 @@ public:
         if ( (fIsOpaque == false) && (fAlpha < 255) && (fIsDither == false) )
             fName.set("S32A_D565_Blend");
         if ( (fIsOpaque == false) && (fAlpha == 255) && (fIsDither == true) )
-            fName.set("S32A_D565_Opaque");
-        if ( (fIsOpaque == true) && (fAlpha == 255) && (fIsDither == false) )
             fName.set("S32A_D565_Opaque_Dither");
         if ( (fIsOpaque == true) && (fAlpha == 255) && (fIsDither == true) )
-            fName.set("S32_D565_Opaque");
-        if ( (fIsOpaque == false) && (fAlpha == 255) && (fIsDither == false) )
             fName.set("S32_D565_Opaque_Dither");
+        if ( (fIsOpaque == false) && (fAlpha == 255) && (fIsDither == false) )
+            fName.set("S32A_D565_Opaque");
     }
 
 protected:
@@ -61,7 +59,7 @@ private:
     typedef SkBenchmark INHERITED;
 };
 
-///////////////////////////////////////////////////////////////////////////////
+int32_t col[1024];
 
 class MatrixScaleRotatePerspBench : public SkBenchmark {
     SkBitmap    fBitmap;
@@ -80,13 +78,20 @@ public:
                 bool isPersp = false, bool isFilter = false)
         : INHERITED(param), fIsOpaque(isOpaque), fTileMode(tileMode), fIsScale(isScale), fIsRotate(isRotate),
           fIsPersp(isPersp), fIsFilter(isFilter) {
-        const int w = 640;
-        const int h = 480;
+        const int w = 32;
+        const int h = 32;
         SkBitmap bm;
-
+        SkRandom rand;
+        uint8_t r, g, b;
+        for (int j = 0; j < w*h ; j++) {
+            r = rand.nextU();
+            g = rand.nextU();
+            b = rand.nextU();
+            col[j] = SkColorSetRGB(r, g, b);
+        }
         bm.setConfig(c, w, h);
         bm.allocPixels();
-        bm.eraseColor(isOpaque ? SK_ColorBLACK : 0);
+        bm.setPixels((void*)col, NULL);
         fBitmap = bm;
         fBitmap.setIsOpaque(isOpaque);
         const char* type_matrix [] = {"scale", "rotate", "persp"};
@@ -107,17 +112,10 @@ protected:
 
     virtual void onDraw(SkCanvas* canvas) {
         SkIPoint dim = this->getSize();
-        SkRandom rand;
 
         SkPaint paint(fPaint);
-        paint.setDither(true);
-
-        const int w = 128;
-        const int h = 128;
-
-        SkBitmap bitmap;
-        bitmap.setConfig(SkBitmap::kARGB_8888_Config, w, h);
-        bitmap.allocPixels();
+        const SkScalar w = SkIntToScalar(fBitmap.width());
+        const SkScalar h = SkIntToScalar(fBitmap.height());
 
         SkPoint fPts[4];
         fPts[0].set(0, 0);
@@ -126,18 +124,17 @@ protected:
         fPts[3].set(0, h);
         SkShader* s;
         if (fTileMode == SkShader::kClamp_TileMode) {
-            s = SkShader::CreateBitmapShader(bitmap, SkShader::kClamp_TileMode, SkShader::kClamp_TileMode);
+            s = SkShader::CreateBitmapShader(fBitmap, SkShader::kClamp_TileMode, SkShader::kClamp_TileMode);
         } else {
-            s = SkShader::CreateBitmapShader(bitmap, SkShader::kRepeat_TileMode, SkShader::kRepeat_TileMode);
+            s = SkShader::CreateBitmapShader(fBitmap, SkShader::kRepeat_TileMode, SkShader::kRepeat_TileMode);
         }
-        paint.setShader(s)->unref();
         if (fIsFilter) {
             paint.setFilterBitmap(true);
         }
         else {
             paint.setFilterBitmap(false);
         }
-        this->setupPaint(&paint);
+        paint.setShader(s)->unref();
 
         if (fIsScale) canvas->scale(2,2);
         if (fIsRotate) canvas->rotate(30);
@@ -171,8 +168,6 @@ protected:
 private:
     typedef SkBenchmark INHERITED;
 };
-
-///////////////////////////////////////////////////////////////////////////////
 
 class BitmapFilter32Bench : public SkBenchmark {
     SkBitmap    fBitmap;
@@ -231,10 +226,9 @@ private:
 
       - S32_D565_Blend_Dither
       - S32A_D565_Blend
-      - S32A_D565_Opaque
       - S32A_D565_Opaque_Dither
-      - S32_D565_Opaque
       - S32_D565_Opaque_Dither
+      - S32A_D565_Opaque
  */
 static SkBenchmark* Fact0(void* p) { return new BlitBench(p, SkBitmap::kARGB_8888_Config, true, 155, true ); }
 static SkBenchmark* Fact1(void* p) { return new BlitBench(p, SkBitmap::kARGB_8888_Config, false, 155, false ); }
@@ -289,8 +283,8 @@ static BenchRegistry mReg11(mFact11);
 /*
    Filter_32 bench:
 
-      - Filter32_alpha routine
-      - Filter32_opaque routine
+      - Filter_32_alpha routine
+      - Filter_32_opaque routine
  */
 static SkBenchmark* fFact0(void* p) { return new BitmapFilter32Bench(p, false, SkBitmap::kARGB_8888_Config, false); }
 static SkBenchmark* fFact1(void* p) { return new BitmapFilter32Bench(p, false, SkBitmap::kARGB_8888_Config, true); }
