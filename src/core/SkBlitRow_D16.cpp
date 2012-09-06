@@ -121,7 +121,7 @@ static void S32A_D565_Opaque(uint16_t* SK_RESTRICT dst,
     }
 }
 
-#else
+#else // __mips__
 static void S32A_D565_Opaque(uint16_t* SK_RESTRICT dst,
                                const SkPMColor* SK_RESTRICT src, int count,
                                U8CPU alpha, int /*x*/, int /*y*/) {
@@ -139,7 +139,7 @@ static void S32A_D565_Opaque(uint16_t* SK_RESTRICT dst,
         } while (--count != 0);
     }
 }
-#endif
+#endif // __mips__
 
 static void S32A_D565_Blend(uint16_t* SK_RESTRICT dst,
                               const SkPMColor* SK_RESTRICT src, int count,

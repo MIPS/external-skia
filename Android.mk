@@ -224,8 +224,9 @@ LOCAL_SRC_FILES += \
 endif
 ifeq ($(TARGET_ARCH),mips)
 LOCAL_SRC_FILES += \
-	src/opts/SkBlitRow_opts_mips.cpp \
-	src/opts/SkBitmapProcState_opts_none.cpp
+	src/opts/SkBlitRow_opts_mips_dsp.cpp \
+	src/opts/SkBitmapProcState_opts_mips_dsp.cpp \
+	src/opts/SkUtils_opts_none.cpp
 endif
 
 # these are for emoji support, needed by webkit
