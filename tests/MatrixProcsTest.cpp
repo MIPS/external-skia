@@ -38,7 +38,6 @@ static unsigned SK_USHIFT16(unsigned x) {
 #define TILEY_PROCF(fy, max)    SkClampMax((fy) >> 16, max)
 #define TILEX_LOW_BITS(fx, max) (((fx) >> 12) & 0xF)
 #define TILEY_LOW_BITS(fy, max) (((fy) >> 12) & 0xF)
-#define CHECK_FOR_DECAL
 #include "SkBitmapProcState_matrix.h"
 
 #define MAKENAME(suffix)        RepeatX_RepeatY ## suffix
@@ -48,9 +47,9 @@ static unsigned SK_USHIFT16(unsigned x) {
 #define TILEY_LOW_BITS(fy, max) ((((fy) & 0xFFFF) * ((max) + 1) >> 12) & 0xF)
 #include "SkBitmapProcState_matrix.h"
 
-#define BUF_SIZE 64
-#define WIDTH 8
-#define HEIGHT 8
+#define WIDTH 320
+#define HEIGHT 240
+#define BUF_SIZE WIDTH*HEIGHT
 
 static void test_perspective_nofilter(skiatest::Reporter* reporter) {
     int width = WIDTH;
@@ -168,8 +167,8 @@ static void test_rotation_affine_filter(skiatest::Reporter* reporter) {
     SkRandom rand;
     SkMatrix m;
     SkPMColor* col = (SkPMColor*)malloc(sizeof(SkPMColor)*BUF_SIZE);
-    uint32_t* dst_ref = (uint32_t*)malloc(sizeof(uint32_t)*BUF_SIZE);
-    uint32_t* dst_opt = (uint32_t*)malloc(sizeof(uint32_t)*BUF_SIZE);
+    uint32_t* dst_ref = (uint32_t*)malloc(sizeof(uint64_t)*BUF_SIZE);
+    uint32_t* dst_opt = (uint32_t*)malloc(sizeof(uint64_t)*BUF_SIZE);
     for (int j = 0; j < BUF_SIZE; j++) {
         col[j] = static_cast<SkPMColor>(rand.nextU());
     }
@@ -189,7 +188,7 @@ static void test_rotation_affine_filter(skiatest::Reporter* reporter) {
     ClampX_ClampY_filter_affine(state, dst_ref, width, 0, 0);
     ClampX_ClampY_filter_affine_mips(state, dst_opt, width, 0, 0);
 
-    if (memcmp(dst_opt, dst_ref, sizeof(uint32_t)*width)) {
+    if (memcmp(dst_opt, dst_ref, sizeof(uint64_t)*width)) {
         SkString str;
         str.printf("Rotate affine filter CLAMP FAILED!\n");
         reporter->reportFailed(str);
@@ -201,7 +200,7 @@ static void test_rotation_affine_filter(skiatest::Reporter* reporter) {
     RepeatX_RepeatY_filter_affine(state, dst_ref, width, 0, 0);
     RepeatX_RepeatY_filter_affine_mips(state, dst_opt, width, 0, 0);
 
-    if (memcmp(dst_opt, dst_ref, sizeof(uint32_t)*width)) {
+    if (memcmp(dst_opt, dst_ref, sizeof(uint64_t)*width)) {
         SkString str;
         str.printf("Rotate affine filter REPEAT FAILED!\n");
         reporter->reportFailed(str);
@@ -219,8 +218,8 @@ static void test_perspective_filter(skiatest::Reporter* reporter) {
     SkRandom rand;
     SkMatrix m;
     SkPMColor* col = (SkPMColor*)malloc(sizeof(SkPMColor)*BUF_SIZE);
-    uint32_t* dst_ref = (uint32_t*)malloc(sizeof(uint32_t)*BUF_SIZE);
-    uint32_t* dst_opt = (uint32_t*)malloc(sizeof(uint32_t)*BUF_SIZE);
+    uint32_t* dst_ref = (uint32_t*)malloc(sizeof(uint64_t)*BUF_SIZE);
+    uint32_t* dst_opt = (uint32_t*)malloc(sizeof(uint64_t)*BUF_SIZE);
 
     for (int j = 0; j < BUF_SIZE; j++) {
         col[j] = static_cast<SkPMColor>(rand.nextU());
@@ -256,7 +255,7 @@ static void test_perspective_filter(skiatest::Reporter* reporter) {
     ClampX_ClampY_filter_persp(state, dst_ref, width, 0, 0);
     ClampX_ClampY_filter_persp_mips(state, dst_opt, width, 0, 0);
 
-    if (memcmp(dst_opt, dst_ref, sizeof(uint32_t)*width)) {
+    if (memcmp(dst_opt, dst_ref, sizeof(uint64_t)*width)) {
         SkString str;
         str.printf("Perspective_filter CLAMP version FAILED!\n");
         reporter->reportFailed(str);
@@ -267,7 +266,7 @@ static void test_perspective_filter(skiatest::Reporter* reporter) {
     RepeatX_RepeatY_filter_persp(state, dst_ref, width, 0, 0);
     RepeatX_RepeatY_filter_persp_mips(state, dst_opt, width, 0, 0);
 
-    if (memcmp(dst_opt, dst_ref, sizeof(uint32_t)*width)) {
+    if (memcmp(dst_opt, dst_ref, sizeof(uint64_t)*width)) {
         SkString str;
         str.printf("Perspective_filter REPEAT version FAILED!\n");
         reporter->reportFailed(str);
@@ -333,8 +332,8 @@ static void test_scale_nofilter(skiatest::Reporter* reporter) {
     SkRandom rand;
     SkMatrix m;
     SkPMColor* col = (SkPMColor*)malloc(sizeof(SkPMColor)*BUF_SIZE);
-    uint32_t* dst_ref = (uint32_t*)malloc(sizeof(uint32_t)*BUF_SIZE);
-    uint32_t* dst_opt = (uint32_t*)malloc(sizeof(uint32_t)*BUF_SIZE);
+    uint32_t* dst_ref = (uint32_t*)malloc(sizeof(uint16_t)*BUF_SIZE);
+    uint32_t* dst_opt = (uint32_t*)malloc(sizeof(uint16_t)*BUF_SIZE);
 
     for (int j = 0; j < BUF_SIZE; j++) {
         col[j] = static_cast<SkPMColor>(rand.nextU());
@@ -354,7 +353,7 @@ static void test_scale_nofilter(skiatest::Reporter* reporter) {
     ClampX_ClampY_nofilter_scale(state, dst_ref, width, 0, 0);
     ClampX_ClampY_nofilter_scale_mips(state, dst_opt, width, 0, 0);
 
-    if (memcmp(dst_ref, dst_opt, sizeof(uint32_t)*width)) {
+    if (memcmp(dst_ref, dst_opt, sizeof(uint16_t)*width)) {
         SkString str;
         str.printf("Scale nofilter CLAMP FAILED!\n");
         reporter->reportFailed(str);
@@ -363,7 +362,7 @@ static void test_scale_nofilter(skiatest::Reporter* reporter) {
     RepeatX_RepeatY_nofilter_scale(state, dst_ref, width, 0, 0);
     RepeatX_RepeatY_nofilter_scale_mips(state, dst_opt, width, 0, 0);
 
-    if (memcmp(dst_ref, dst_opt, sizeof(uint32_t)*width)) {
+    if (memcmp(dst_ref, dst_opt, sizeof(uint16_t)*width)) {
         SkString str;
         str.printf("Scale nofilter REPEAT FAILED!\n");
         reporter->reportFailed(str);
