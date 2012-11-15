@@ -12,6 +12,7 @@ LOCAL_SRC_FILES := \
 LOCAL_SRC_FILES += \
   AAClipBench.cpp \
   BitmapBench.cpp \
+  BlitBench.cpp \
   BlurBench.cpp \
   ChromeBench.cpp \
   DecodeBench.cpp \
