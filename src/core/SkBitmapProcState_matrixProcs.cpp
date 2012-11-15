@@ -39,8 +39,8 @@ void decal_filter_scale(uint32_t dst[], SkFixed fx, SkFixed dx, int count);
 #define CHECK_FOR_DECAL
 #if	defined(__ARM_HAVE_NEON)
     #include "SkBitmapProcState_matrix_clamp.h"
-#elif defined(__mips__) && __mips_isa_rev>=2
-    #include "SkBitmapProcState_matrix_mips_clamp.h"
+#elif defined(__mips__) && defined(__mips_dsp)
+    #include "SkBitmapProcState_matrix_mips_dsp_clamp.h"
 #else
     #include "SkBitmapProcState_matrix.h"
 #endif
@@ -52,8 +52,8 @@ void decal_filter_scale(uint32_t dst[], SkFixed fx, SkFixed dx, int count);
 #define TILEY_LOW_BITS(fy, max) ((((fy) & 0xFFFF) * ((max) + 1) >> 12) & 0xF)
 #if	defined(__ARM_HAVE_NEON)
     #include "SkBitmapProcState_matrix_repeat.h"
-#elif defined(__mips__) && __mips_isa_rev>=2
-    #include "SkBitmapProcState_matrix_mips_repeat.h"
+#elif defined(__mips__) && defined(__mips_dsp)
+    #include "SkBitmapProcState_matrix_mips_dsp_repeat.h"
 #else
     #include "SkBitmapProcState_matrix.h"
 #endif
@@ -163,8 +163,14 @@ static SkBitmapProcState::IntTileProc choose_int_tile_proc(unsigned tm) {
 
 void decal_nofilter_scale(uint32_t dst[], SkFixed fx, SkFixed dx, int count)
 {
+#if defined(__mips__)
+    asm volatile (
+        "pref  1, 0(%0)   \n\t"
+        "pref  1, 32(%0)  \n\t"
+        ::"r"(dst));
+#endif // defined(__mips__)
     int i;
-#if defined( __mips_dsp)
+#if defined(__mips_dsp)
     register int t1, t2, t3, t4;
     __asm__ __volatile__ (
         "addu        %[t1], %[fx], %[dx]          \n\t"         // fx+dx
@@ -172,11 +178,12 @@ void decal_nofilter_scale(uint32_t dst[], SkFixed fx, SkFixed dx, int count)
         "srl         %[t3], %[count], 1           \n\t"         //
         "blez        %[t3], 2f                    \n\t"         // check for count <= 0
         "1:                                       \n\t"
+        "pref           1,  64(%[dst])            \n\t"
 #ifdef SK_CPU_BENDIAN
         "precrq.ph.w %[t4], %[fx], %[t1]          \n\t"         // fx || (fx+dx)
-#else
+#else // SK_CPU_LENDIAN
         "precrq.ph.w %[t4], %[t1], %[fx]          \n\t"         // (fx+dx) || fx
-#endif
+#endif // SK_CPU_BENDIAN
         "sw          %[t4], 0(%[dst])             \n\t"         // store to dst[]
         "addu        %[fx], %[fx], %[t2]          \n\t"         // fx += 2*dx
         "addu        %[t1], %[t1], %[t2]          \n\t"         // (fx+dx) += 2*dx
@@ -189,11 +196,12 @@ void decal_nofilter_scale(uint32_t dst[], SkFixed fx, SkFixed dx, int count)
         "sra         %[fx], %[fx], 16             \n\t"         //
         "sh          %[fx], 0(%[dst])             \n\t"         //
         "3:                                       \n\t"
-        : [t1] "=&r" (t1), [t2] "=&r" (t2), [t3] "=&r" (t3), [t4] "=&r" (t4)
-        : [fx] "r" (fx), [dst] "r" (dst), [count] "r" (count), [dx] "r" (dx)
+        : [t1] "=&r" (t1), [t2] "=&r" (t2), [t3] "=&r" (t3), [t4] "=&r" (t4),
+          [fx] "+r" (fx), [dst] "+r" (dst)
+        : [count] "r" (count), [dx] "r" (dx)
         : "memory"
   );
-#else
+#else // __mips_dsp
 #if	defined(__ARM_HAVE_NEON)
     if (count >= 8) {
         /* SkFixed is 16.16 fixed point */
@@ -239,7 +247,7 @@ void decal_nofilter_scale(uint32_t dst[], SkFixed fx, SkFixed dx, int count)
         } while (count >= 8);
         dst = (uint32_t *) dst16;
     }
-#else
+#else // NEON
     for (i = (count >> 2); i > 0; --i)
     {
         *dst++ = pack_two_shorts(fx >> 16, (fx + dx) >> 16);
@@ -248,7 +256,7 @@ void decal_nofilter_scale(uint32_t dst[], SkFixed fx, SkFixed dx, int count)
         fx += dx+dx;
     }
     count &= 3;
-#endif
+#endif // NEON
 
     uint16_t* xx = (uint16_t*)dst;
     for (i = count; i > 0; --i) {
@@ -295,8 +303,8 @@ void decal_filter_scale(uint32_t dst[], SkFixed fx, SkFixed dx, int count)
             count -= 8;
         }
     }
-#endif
-#if defined ( __mips_dsp)
+#endif // NEON
+#if defined (__mips_dsp)
     register int t1, t2, t3;
     __asm__ __volatile__ (
         "sll    %[t1], %[count], 2        \n\t"         // count*sizeof(int)
@@ -313,11 +321,12 @@ void decal_filter_scale(uint32_t dst[], SkFixed fx, SkFixed dx, int count)
         "sw     %[t3], -4(%[dst])         \n\t"         // store to dst[]
         "bne    %[dst], %[t1], 1b         \n\t"         //
         "2:                               \n\t"
-        : [t1] "=&r" (t1), [t2] "=&r" (t2), [t3] "=&r" (t3)
-        : [fx] "r" (fx), [dst] "r" (dst), [count] "r" (count), [dx] "r" (dx)
+        : [t1] "=&r" (t1), [t2] "=&r" (t2), [t3] "=&r" (t3),
+          [fx] "+r" (fx), [dst] "+r" (dst)
+        : [count] "r" (count), [dx] "r" (dx)
         : "memory"
     );
-#else
+#else // __mips_dsp
     if (count & 1)
     {
         SkASSERT((fx >> (16 + 14)) == 0);

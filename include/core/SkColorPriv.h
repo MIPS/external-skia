@@ -297,21 +297,21 @@ static inline uint32_t SkAlphaMulQ(uint32_t c, unsigned scale) {
 #if defined ( __mips_dsp) && defined (SK_CPU_LENDIAN)
     register int32_t t0, t1, t2;
     asm volatile(
-	"replv.ph %[t2], %[scale]		\n\t"
-	"muleu_s.ph.qbr	%[t0], %[c], %[t2]	\n\t"
-	"muleu_s.ph.qbl	%[t1], %[c], %[t2]	\n\t"
-	"precrq.qb.ph	%[t2], %[t1], %[t0]	\n\t"
-	:[t2]"=&r"(t2), [t1]"=&r"(t1), [t0]"=&r"(t0)
-	:[c]"r"(c), [scale]"r"(scale)
+        "replv.ph        %[t2], %[scale]      \n\t"
+        "muleu_s.ph.qbr  %[t0], %[c], %[t2]   \n\t"
+        "muleu_s.ph.qbl  %[t1], %[c], %[t2]   \n\t"
+        "precrq.qb.ph    %[t2], %[t1], %[t0]  \n\t"
+        :[t2]"=&r"(t2), [t1]"=&r"(t1), [t0]"=&r"(t0)
+        :[c]"r"(c), [scale]"r"(scale)
     );
     return t2;
-#else
+#else // if defined( __mips_dsp) && defined (SK_CPU_LENDIAN)
     uint32_t mask = gMask_00FF00FF;
 
     uint32_t rb = ((c & mask) * scale) >> 8;
     uint32_t ag = ((c >> 8) & mask) * scale;
     return (rb & mask) | (ag & ~mask);
-#endif
+#endif // if defined( __mips_dsp) && defined (SK_CPU_LENDIAN)
 }
 
 static inline SkPMColor SkPMSrcOver(SkPMColor src, SkPMColor dst) {
