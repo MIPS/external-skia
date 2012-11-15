@@ -176,25 +176,30 @@ proc = SkBlitRow::Factory(1, SkBitmap::kRGB_565_Config); //were calling S32_D565
     SkPMColor src[TEST_DUR];
     U8CPU alpha;
     alpha = 253;
-    int x, y, r;
+    int x, y;
+    uint8_t r, g, b;
     SkRandom rand;
     SkString str;
 
     for (int j = 0; j < count_xy; j++) {
-      for (int i = 0; i < TEST_DUR; i++ ) {
-        src[i] = static_cast<SkPMColor>(rand.nextU());
-      }
-      x = static_cast<int>(rand.nextU());
-      y = static_cast<int>(rand.nextU());
-      memset(dst, 0, TEST_DUR * 2);
-      memset(dst_opt, 0, TEST_DUR * 2);
-      proc(dst_opt, src, TEST_DUR, alpha, x, y);
-      S32_D565_Blend_referent(dst, src, TEST_DUR, alpha, x, y);
+        for (int i = 0; i < TEST_DUR; i++) {
+            r = rand.nextU();
+            g = rand.nextU();
+            b = rand.nextU();
+            src[i] = SkColorSetRGB(r, g, b);
+        }
+        x = static_cast<int>(rand.nextU());
+        y = static_cast<int>(rand.nextU());
+        memset(dst, 0, TEST_DUR * 2);
+        memset(dst_opt, 0, TEST_DUR * 2);
 
-      if ( memcmp((void*)dst, (void*)dst_opt, TEST_DUR * 2)!=0 ) {
-        str.printf("test_S32_D565_Blend ERROR!\nalpha: %X\n", alpha);
-        reporter->reportFailed(str);
-      }
+        proc(dst_opt, src, TEST_DUR, alpha, x, y);
+        S32_D565_Blend_referent(dst, src, TEST_DUR, alpha, x, y);
+
+        if ( memcmp((void*)dst_opt, (void*)dst, TEST_DUR * 2)!=0 ) {
+            str.printf("test_S32_D565_Blend ERROR!\nalpha: %X\n", alpha);
+            reporter->reportFailed(str);
+        }
     }
 }
 static void test_S32A_D565_Opaque_Dither(skiatest::Reporter* reporter) {
@@ -207,26 +212,30 @@ static void test_S32A_D565_Opaque_Dither(skiatest::Reporter* reporter) {
     SkPMColor src[TEST_DUR];
     U8CPU alpha;
     alpha = 255;
-    int x, y, r;
+    int x, y;
+    uint8_t r, g, b;
     SkRandom rand;
     SkString str;
 
     for (int j = 0; j < count_xy; j++) {
-      for (int i = 0; i < TEST_DUR; i++ ) {
-        src[i] = static_cast<SkPMColor>(rand.nextU());
-      }
-      x = static_cast<int>(rand.nextU());
-      y = static_cast<int>(rand.nextU());
-      memset(dst, 0, TEST_DUR * 2);
-      memset(dst_opt, 0, TEST_DUR * 2);
-      S32A_D565_Opaque_Dither_referent(dst, src, TEST_DUR, alpha, x, y);
-      proc(dst_opt, src, TEST_DUR, alpha, x, y);
+        for (int i = 0; i < TEST_DUR; i++) {
+            r = rand.nextU();
+            g = rand.nextU();
+            b = rand.nextU();
+            src[i] = SkColorSetRGB(r, g, b);
+        }
+        x = static_cast<int>(rand.nextU());
+        y = static_cast<int>(rand.nextU());
+        memset(dst, 0, TEST_DUR * 2);
+        memset(dst_opt, 0, TEST_DUR * 2);
 
-      if ( memcmp((void*)dst, (void*)dst_opt, TEST_DUR * 2)!=0 ) {
+        S32A_D565_Opaque_Dither_referent(dst, src, TEST_DUR, alpha, x, y);
+        proc(dst_opt, src, TEST_DUR, alpha, x, y);
 
-        str.printf("test_S32A_D565_Opaque_Dither ERROR!\nx: %X, y: %X, alpha: %X\n", x, y, alpha);
-        reporter->reportFailed(str);
-      }
+        if ( memcmp((void*)dst, (void*)dst_opt, TEST_DUR * 2)!=0 ) {
+            str.printf("test_S32A_D565_Opaque_Dither ERROR!\nx: %X, y: %X, alpha: %X\n", x, y, alpha);
+            reporter->reportFailed(str);
+        }
     }
 }
 static void test_S32_D565_Opaque_Dither(skiatest::Reporter* reporter) {
@@ -239,23 +248,28 @@ static void test_S32_D565_Opaque_Dither(skiatest::Reporter* reporter) {
     SkPMColor src[TEST_DUR];
     U8CPU alpha;
     alpha = 255;
-    int x, y, r;
+    int x, y;
+    uint8_t r, g, b;
     SkRandom rand;
     SkString str;
+
     for (int j = 0; j < count_xy; j++) {
-      for (int i = 0; i < TEST_DUR; i++ ) {
-        src[i] = static_cast<SkPMColor>(rand.nextU());
-      }
-      x = static_cast<int>(rand.nextU());
-      y = static_cast<int>(rand.nextU());
+        for (int i = 0; i < TEST_DUR; i++) {
+            r = rand.nextU();
+            g = rand.nextU();
+            b = rand.nextU();
+            src[i] = SkColorSetRGB(r, g, b);
+        }
+        x = static_cast<int>(rand.nextU());
+        y = static_cast<int>(rand.nextU());
 
-      proc(dst_opt, src, TEST_DUR, alpha, x, y);
-      S32_D565_Opaque_Dither_referent(dst, src, TEST_DUR, alpha, x, y);
+        proc(dst_opt, src, TEST_DUR, alpha, x, y);
+        S32_D565_Opaque_Dither_referent(dst, src, TEST_DUR, alpha, x, y);
 
-      if ( memcmp((void*)dst, (void*)dst_opt, TEST_DUR)!=0 ) {
-        str.printf("test_S32_D565_Opaque_Dither ERROR!\nx: %X, y: %X, alpha: %X\n", x, y, alpha);
-        reporter->reportFailed(str);
-      }
+        if ( memcmp((void*)dst, (void*)dst_opt, TEST_DUR)!=0 ) {
+            str.printf("test_S32_D565_Opaque_Dither ERROR!\nx: %X, y: %X, alpha: %X\n", x, y, alpha);
+            reporter->reportFailed(str);
+        }
     }
 }
 
@@ -268,8 +282,8 @@ static void test_S32A_D565_Opaque(skiatest::Reporter* reporter) {
     uint16_t dst_opt[TEST_DUR];
     SkPMColor src[TEST_DUR];
     U8CPU alpha;
-
-    int x, y, r;
+    int x, y;
+    uint8_t r, g, b;
     SkRandom rand;
     SkString str;
     x = 0;
@@ -277,17 +291,20 @@ static void test_S32A_D565_Opaque(skiatest::Reporter* reporter) {
     alpha = 255;
 
     for (int j = 0; j < count_xy; j++) {
-      for (int i = 0; i < TEST_DUR; i++ ) {
-        src[i] = static_cast<SkPMColor>(rand.nextU());
-        dst[i] = static_cast<SkPMColor>(rand.nextU());
-        dst_opt[i] = dst[i];
-      }
-      proc_opt(dst_opt, src, TEST_DUR, alpha, x, y);
-      S32A_D565_Opaque_referent(dst, src, TEST_DUR, alpha, x, y);
-      if ( memcmp((void*)dst, (void*)dst_opt, TEST_DUR)!=0 ) {
-        str.printf("test_S32A_D565_Opaque ERROR!\nx: %X, y: %X, alpha: %X\n", x, y, alpha);
-        reporter->reportFailed(str);
-      }
+        for (int i = 0; i < TEST_DUR; i++) {
+            r = rand.nextU();
+            g = rand.nextU();
+            b = rand.nextU();
+            src[i] = SkColorSetRGB(r, g, b);
+        }
+
+        proc_opt(dst_opt, src, TEST_DUR, alpha, x, y);
+        S32A_D565_Opaque_referent(dst, src, TEST_DUR, alpha, x, y);
+
+        if ( memcmp((void*)dst, (void*)dst_opt, TEST_DUR)!=0 ) {
+            str.printf("test_S32A_D565_Opaque ERROR!\nx: %X, y: %X, alpha: %X\n", x, y, alpha);
+            reporter->reportFailed(str);
+        }
     }
 }
 
@@ -316,14 +333,13 @@ static void test_S32_D565_Blend_Dither(skiatest::Reporter* reporter) {
         dst[i] = dst_opt[i];
       }
 
-      proc(dst_opt, src, TEST_DUR, alpha, x, y);
-      S32_D565_Blend_Dither_referent(dst, src, TEST_DUR, alpha, x, y);
+        proc(dst_opt, src, TEST_DUR, alpha, x, y);
+        S32_D565_Blend_Dither_referent(dst, src, TEST_DUR, alpha, x, y);
 
-      if ( memcmp((void*)dst, (void*)dst_opt, TEST_DUR)!=0 ) {
-
-        str.printf("test_S32_D565_Blend_Dither ERROR!\nx: %X, y: %X, alpha: %X\n", x, y, alpha);
-        reporter->reportFailed(str);
-      }
+        if ( memcmp((void*)dst, (void*)dst_opt, TEST_DUR)!=0 ) {
+            str.printf("test_S32_D565_Blend_Dither ERROR!\nx: %X, y: %X, alpha: %X\n", x, y, alpha);
+            reporter->reportFailed(str);
+        }
     }
 }
 
@@ -338,25 +354,29 @@ static void test_S32A_D565_Blend(skiatest::Reporter* reporter) {
     U8CPU alpha;
     alpha = 155;
     int x, y;
-    int r;
+    uint8_t r, g, b;
     SkRandom rand;
     x = 0;
     y = 0;
 
     for (int j = 0; j < count_a; j++) {
+        for (int i = 0; i < TEST_DUR; i++) {
+            r = rand.nextU();
+            g = rand.nextU();
+            b = rand.nextU();
+            src[i] = SkColorSetRGB(r, g, b);
+        }
+        alpha = static_cast<U8CPU>(rand.nextBits(8));
+        if (alpha == 0) alpha = 123;
 
-      for (int i = 0; i < TEST_DUR; i++) {
-        src[i] = static_cast<SkPMColor>(rand.nextU());
-      }
-      alpha = static_cast<U8CPU>(rand.nextBits(8));
-      if (alpha == 0) alpha = 123;
-      proc(dst_opt, src, TEST_DUR, alpha, x, y);
-      S32A_D565_Blend_referent(dst, src, TEST_DUR, alpha, x, y);
-      if ( memcmp((void*)dst, (void*)dst_opt, TEST_DUR)!=0 ) {
-        SkString str;
-        str.printf("test_S32_D565_Blend ERROR!\nx: %X, y: %X, alpha: %X\n", x, y, alpha);
-        reporter->reportFailed(str);
-      }
+        proc(dst_opt, src, TEST_DUR, alpha, x, y);
+        S32A_D565_Blend_referent(dst, src, TEST_DUR, alpha, x, y);
+
+        if ( memcmp((void*)dst, (void*)dst_opt, TEST_DUR)!=0 ) {
+            SkString str;
+            str.printf("test_S32_D565_Blend ERROR!\nx: %X, y: %X, alpha: %X\n", x, y, alpha);
+            reporter->reportFailed(str);
+        }
     }
 }
 
@@ -364,29 +384,33 @@ static void test_S32_Blend_BlitRow32(skiatest::Reporter* reporter) {
     SkBlitRow::Proc32 proc32 = NULL;
     proc32 = SkBlitRow::Factory32(1); //were calling S32_Blend_BlitRow32_PROC
     int count_a = 10;
-    uint32_t dst[TEST_DUR];
-    uint32_t dst_opt[TEST_DUR];
+    SkPMColor dst[TEST_DUR];
+    SkPMColor dst_opt[TEST_DUR];
     SkPMColor src[TEST_DUR];
     U8CPU alpha;
     SkRandom rand;
     SkString str;
+    uint8_t r, g, b;
 
-    for(int i = 0; i < count_a; i++) {
-      for (int j = 0; j < TEST_DUR; j++) {
-        src[j] = static_cast<SkPMColor>(rand.nextU());
-        dst[j] = static_cast<SkPMColor>(rand.nextU());
-        dst_opt[j] = dst[j];
-      }
-      alpha = static_cast<U8CPU>(rand.nextBits(8));
-      if (alpha == 0) alpha = 223;
+    for(int j = 0; j < count_a; j++) {
+        for (int i = 0; i < TEST_DUR; i++) {
+            r = rand.nextU();
+            g = rand.nextU();
+            b = rand.nextU();
+            src[i] = SkColorSetRGB(r, g, b);
+            dst[i] = static_cast<SkPMColor>(rand.nextU());
+            dst_opt[i] = dst[i];
+        }
+        alpha = static_cast<U8CPU>(rand.nextBits(8));
+        if (alpha == 0) alpha = 223;
 
-      proc32(dst_opt, src, TEST_DUR, alpha);
-      S32_Blend_BlitRow32_referent(dst, src, TEST_DUR, alpha);
+        proc32(dst_opt, src, TEST_DUR, alpha);
+        S32_Blend_BlitRow32_referent(dst, src, TEST_DUR, alpha);
 
-      if ( memcmp((void*)dst, (void*)dst_opt, TEST_DUR)!=0 ) {
-        str.printf("test_S32_Blend_BlitRow32 ERROR!\nalpha: %X\n", alpha);
-        reporter->reportFailed(str);
-      }
+        if ( memcmp((void*)dst, (void*)dst_opt, TEST_DUR)!=0 ) {
+            str.printf("test_S32_Blend_BlitRow32 ERROR!\nalpha: %X\n", alpha);
+            reporter->reportFailed(str);
+        }
     }
 }
 
@@ -396,10 +420,8 @@ static void test_S32(skiatest::Reporter* reporter) {
     test_S32A_D565_Opaque_Dither(reporter);
     test_S32_D565_Opaque_Dither(reporter);
     test_S32A_D565_Opaque(reporter);
-
     test_S32_D565_Blend_Dither(reporter);
     test_S32A_D565_Blend(reporter);
-
     test_S32_Blend_BlitRow32(reporter);
 }
 

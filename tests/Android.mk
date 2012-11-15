@@ -7,6 +7,8 @@ LOCAL_SRC_FILES:= \
   AAClipTest.cpp \
   BitmapCopyTest.cpp \
   BitmapGetColorTest.cpp \
+  BitmapProcStateTest.cpp \
+  Blitter_RGB16Test.cpp \
   BlitRowTest.cpp \
   BlurTest.cpp \
   CanvasTest.cpp \

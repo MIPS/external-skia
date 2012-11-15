@@ -2,7 +2,7 @@
 #include "SkRandom.h"
 #include "SkBitmapProcState_filter.h"
 
-#define TEST_DUR 101
+#define TEST_DUR 10
 
 /*REFERENT FUNCTIONS*/
 static inline void Filter_32_alpha_referent(unsigned x, unsigned y,
@@ -68,8 +68,8 @@ static inline void Filter_32_opaque_referent(unsigned x, unsigned y,
 
 /*TEST FUNCTIONS*/
 static void test_Filter_32_alpha(skiatest::Reporter* reporter) {
-    uint32_t a00[TEST_DUR], a01[TEST_DUR], a10[TEST_DUR], a11[TEST_DUR];
-    uint32_t x[TEST_DUR], y[TEST_DUR];
+    uint32_t a00, a01, a10, a11;
+    unsigned x, y;
     unsigned alphaScale[TEST_DUR];
     SkPMColor dst[TEST_DUR];
     SkPMColor dst_opt[TEST_DUR];
@@ -82,35 +82,28 @@ static void test_Filter_32_alpha(skiatest::Reporter* reporter) {
     SkString str;
 
     for (int i = 0; i < TEST_DUR; i++ ) {
-      a00[i] = static_cast<SkPMColor>(rand.nextU());
-      a01[i] = static_cast<SkPMColor>(rand.nextU());
-      a10[i] = static_cast<SkPMColor>(rand.nextU());
-      a11[i] = static_cast<SkPMColor>(rand.nextU());
-      x[i] = static_cast<int>(rand.nextU());
-      y[i] = static_cast<int>(rand.nextU());
-      alphaScale[i] = static_cast<unsigned>(rand.nextBits(16));
-    }
-    for (int i = 0; i < TEST_DUR; i++ ) {
-      Filter_32_alpha_referent(x[i], y[i],
-                               a00[i], a01[i],
-                               a10[i], a11[i],
-                               &(dst_one),
-                               alphaScale[i]);
-      Filter_32_alpha(x[i], y[i],
-                       a00[i], a01[i],
-                       a10[i], a11[i],
-                       &(dst_opt_one),
-                       alphaScale[i]);
-      if (dst_one != dst_opt_one) {
-        str.printf("test_Filter_32_alpha ERROR!x: %d, y: %d, a00: %d, a01: %d, a10: %d, a11: %d, alpha: %d\n",x[i], y[i], a00[i], a01[i], a10[i], a11[i], alphaScale[i]);
-        reporter->reportFailed(str);
+        a00 = static_cast<SkPMColor>(rand.nextU());
+        a01 = static_cast<SkPMColor>(rand.nextU());
+        a10 = static_cast<SkPMColor>(rand.nextU());
+        a11 = static_cast<SkPMColor>(rand.nextU());
+        x = static_cast<unsigned>(rand.nextBits(4));
+        y = static_cast<unsigned>(rand.nextBits(4));
+        alphaScale[i] = static_cast<unsigned>(rand.nextBits(8));
+
+        Filter_32_alpha_referent(x, y, a00, a01, a10, a11, &(dst_one), alphaScale[i]);
+        Filter_32_alpha(x, y, a00, a01, a10, a11, &(dst_opt_one), alphaScale[i]);
+
+        if (dst_one != dst_opt_one) {
+            str.printf("test_Filter_32_alpha ERROR!x: %d, y: %d, a00: %d, a01: %d, a10: %d, a11: %d, alpha: %d\n"
+                       ,x, y, a00, a01, a10, a11, alphaScale);
+            reporter->reportFailed(str);
     }
   }
 }
 
 static void test_Filter_32_opaque(skiatest::Reporter* reporter) {
     uint32_t a00, a01, a10, a11;
-    uint32_t x, y;
+    unsigned x, y;
     SkPMColor dst_one;
     SkPMColor dst_opt_one;
 
@@ -119,31 +112,27 @@ static void test_Filter_32_opaque(skiatest::Reporter* reporter) {
     SkString str;
 
     for (int i = 0; i < TEST_DUR; i++ ) {
-      a00 = static_cast<SkPMColor>(rand.nextU());
-      a01 = static_cast<SkPMColor>(rand.nextU());
-      a10 = static_cast<SkPMColor>(rand.nextU());
-      a11 = static_cast<SkPMColor>(rand.nextU());
-      x = static_cast<int>(rand.nextU());
-      y = static_cast<int>(rand.nextU());
-      Filter_32_opaque_referent(x, y,
-                                a00, a01,
-                                a10, a11,
-                                &(dst_one));
-      Filter_32_opaque(x, y,
-                       a00, a01,
-                       a10, a11,
-                       &(dst_opt_one));
-      if (dst_one != dst_opt_one) {
-        str.printf("test_Filter_32_opaque ERROR!x: %d, y: %d, a00: %d, a01: %d, a10: %d, a11: %d\n",x, y, a00, a01, a10, a11);
-        reporter->reportFailed(str);
-      }
+        a00 = static_cast<SkPMColor>(rand.nextU());
+        a01 = static_cast<SkPMColor>(rand.nextU());
+        a10 = static_cast<SkPMColor>(rand.nextU());
+        a11 = static_cast<SkPMColor>(rand.nextU());
+        x = static_cast<unsigned>(rand.nextBits(4));
+        y = static_cast<unsigned>(rand.nextBits(4));
+
+        Filter_32_opaque_referent(x, y, a00, a01, a10, a11, &(dst_one));
+        Filter_32_opaque(x, y, a00, a01, a10, a11, &(dst_opt_one));
+
+        if (dst_one != dst_opt_one) {
+            str.printf("test_Filter_32_opaque ERROR!x: %d, y: %d, a00: %d, a01: %d, a10: %d, a11: %d\n",x, y, a00, a01, a10, a11);
+            reporter->reportFailed(str);
+        }
     }
 }
 
 //RUN SOME TESTS:
 static void test_Filter32(skiatest::Reporter* reporter) {
-  test_Filter_32_alpha(reporter);
-  test_Filter_32_opaque(reporter);
+    test_Filter_32_alpha(reporter);
+    test_Filter_32_opaque(reporter);
 }
 
 #include "TestClassDef.h"
