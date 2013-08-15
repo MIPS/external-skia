@@ -13,7 +13,9 @@
 #include "SkBitmap.h"
 #include "SkMatrix.h"
 
+#ifndef SK_CPU_MIPS
 #define FractionalInt_IS_64BIT
+#endif
 
 #ifdef FractionalInt_IS_64BIT
     typedef SkFixed48    SkFractionalInt;

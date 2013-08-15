@@ -100,7 +100,7 @@
 //////////////////////////////////////////////////////////////////////
 
 #if !defined(SK_CPU_BENDIAN) && !defined(SK_CPU_LENDIAN)
-    #if defined (__ppc__) || defined(__ppc64__)
+    #if defined (__ppc__) || defined(__ppc64__) || (defined( __mips__) && defined(__MIPSEB__))
         #define SK_CPU_BENDIAN
     #else
         #define SK_CPU_LENDIAN
@@ -184,7 +184,21 @@
 #endif
 
 //////////////////////////////////////////////////////////////////////
+// MIPS defines
 
+#if defined(__mips__) && (!defined(__APPLE__) || !TARGET_IPHONE_SIMULATOR)
+    #define SK_CPU_MIPS
+
+    #if defined(__GNUC__)
+        #if defined(__MIPS_HAS_DSPR2) || (defined(__mips_dsp) && (__mips_dsp_rev >= 2))
+            #define SK_MIPS_DSP_REV 2
+        #elif defined(__MIPS_HAS_DSP) || (defined(__mips_dsp) && (__mips_dsp_rev >= 1))
+            #define SK_MIPS_DSP_REV 1
+        #endif
+    #endif
+#endif
+
+//////////////////////////////////////////////////////////////////////
 /**
  *  THUMB is the only known config where we avoid small branches in
  *  favor of more complex math.
