@@ -44,12 +44,27 @@ ifeq ($(TARGET_ARCH),x86)
 	LOCAL_CFLAGS += -DANDROID_LARGE_MEMORY_DEVICE
 endif
 
+ifeq ($(TARGET_ARCH),arm)
 ifneq ($(ARCH_ARM_HAVE_VFP),true)
 	LOCAL_CFLAGS += -DSK_SOFTWARE_FLOAT
+endif
+endif
+
+ifeq ($(TARGET_ARCH),mips)
+ifneq ($(ARCH_MIPS_HAS_FPU), true)
+	LOCAL_CFLAGS += -DSK_SOFTWARE_FLOAT
+endif
 endif
 
 ifeq ($(ARCH_ARM_HAVE_NEON),true)
 	LOCAL_CFLAGS += -D__ARM_HAVE_NEON
+endif
+
+ifeq ($(ARCH_MIPS_HAS_DSP),true)
+	LOCAL_CFLAGS += -D__MIPS_HAS_DSP
+	ifeq ($(ARCH_MIPS_DSP_REV), 2)
+		LOCAL_CFLAGS += -D__MIPS_HAS_DSPR2
+	endif
 endif
 
 LOCAL_CFLAGS += -DDCT_IFAST_SUPPORTED
@@ -529,6 +544,21 @@ LOCAL_SRC_FILES += \
 	src/opts/SkBitmapProcState_opts_arm.cpp \
 	src/opts/SkBlitRow_opts_arm.cpp
 
+else ifeq ($(TARGET_ARCH),mips)
+LOCAL_SRC_FILES += \
+	src/opts/SkUtils_opts_none.cpp \
+	src/core/SkUtilsMips.cpp
+ifeq ($(ARCH_MIPS_HAS_DSP),true)
+LOCAL_SRC_FILES += \
+	src/opts/SkBlitRow_opts_mips_dsp.cpp \
+	src/opts/SkBitmapProcState_mips_dsp.cpp \
+	src/opts/SkBitmapProcState_matrixProcs_mips_dsp.cpp \
+	src/opts/SkBitmapProcState_opts_mips_dsp.cpp
+else
+LOCAL_SRC_FILES += \
+	src/opts/SkBlitRow_opts_none.cpp \
+	src/opts/SkBitmapProcState_opts_none.cpp
+endif
 else
 LOCAL_SRC_FILES += \
 	src/opts/SkBlitRow_opts_none.cpp \
