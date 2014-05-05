@@ -571,7 +571,6 @@ LOCAL_SHARED_LIBRARIES := \
 	liblog \
 	libcutils \
 	libft2 \
-	libjpeg \
 	libpng \
 	libutils \
 	libz \
@@ -579,6 +578,12 @@ LOCAL_SHARED_LIBRARIES := \
 	libutils \
 	libEGL \
 	libGLESv2
+
+ifeq ($(USE_GMS_LIBS),true)
+	LOCAL_SHARED_LIBRARIES += libjpeg_old
+else
+	LOCAL_SHARED_LIBRARIES += libjpeg
+endif
 
 LOCAL_STATIC_LIBRARIES := \
 	libgif \
