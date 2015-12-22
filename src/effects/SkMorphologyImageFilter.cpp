@@ -46,6 +46,7 @@ enum MorphDirection {
     kX, kY
 };
 
+#ifndef SK_CPU_MIPS
 template<MorphDirection direction>
 static void erode(const SkPMColor* src, SkPMColor* dst,
                   int radius, int width, int height,
@@ -83,7 +84,49 @@ static void erode(const SkPMColor* src, SkPMColor* dst,
         dst += dstStrideX;
     }
 }
+#else
+template<MorphDirection direction>
+static void erode(const SkPMColor* src, SkPMColor* dst,
+                  int radius, int width, int height,
+                  int srcStride, int dstStride)
+{
+    const int srcStrideX = direction == kX ? 1 : srcStride;
+    const int dstStrideX = direction == kX ? 1 : dstStride;
+    const int srcStrideY = direction == kX ? srcStride : 1;
+    const int dstStrideY = direction == kX ? dstStride : 1;
+    radius = SkMin32(radius, width - 1);
+    const SkPMColor* upperSrc = src + radius * srcStrideX;
+    for (int x = 0; x < width; ++x) {
+        const SkPMColor* lp = src;
+        const SkPMColor* up = upperSrc;
+        SkPMColor* dptr = dst;
 
+        for (int y = 0; y < height; ++y) {
+            int tmp_const = 0xFFFFFFFF;
+            int b_1 = 0;
+            for (const SkPMColor* p = lp; p <= up; p += srcStrideX) {
+                __asm__ volatile (
+                    "lw          %[b_1],       0(%[p])                    \n\t"
+                    "cmpu.lt.qb  %[b_1],       %[tmp_const]               \n\t"
+                    "pick.qb     %[tmp_const], %[b_1],      %[tmp_const]  \n\t"
+                    : [b_1]"=&r"(b_1), [tmp_const]"+r"(tmp_const)
+                    : [p]"r"(p)
+                    : "memory"
+                );
+            }
+            *dptr =  tmp_const;
+            dptr += dstStrideY;
+            lp += srcStrideY;
+            up += srcStrideY;
+        }
+        if (x >= radius) src += srcStrideX;
+        if (x + radius < width - 1) upperSrc += srcStrideX;
+        dst += dstStrideX;
+    }
+}
+#endif  // SK_CPU_MIPS
+
+#ifndef SK_CPU_MIPS
 template<MorphDirection direction>
 static void dilate(const SkPMColor* src, SkPMColor* dst,
                    int radius, int width, int height,
@@ -121,6 +164,48 @@ static void dilate(const SkPMColor* src, SkPMColor* dst,
         dst += dstStrideX;
     }
 }
+#else
+template<MorphDirection direction>
+static void dilate(const SkPMColor* src, SkPMColor* dst,
+                   int radius, int width, int height,
+                   int srcStride, int dstStride)
+{
+    const int srcStrideX = direction == kX ? 1 : srcStride;
+    const int dstStrideX = direction == kX ? 1 : dstStride;
+    const int srcStrideY = direction == kX ? srcStride : 1;
+    const int dstStrideY = direction == kX ? dstStride : 1;
+    radius = SkMin32(radius, width - 1);
+    const SkPMColor* upperSrc = src + radius * srcStrideX;
+    for (int x = 0; x < width; ++x) {
+        const SkPMColor* lp = src;
+        const SkPMColor* up = upperSrc;
+        SkPMColor* dptr = dst;
+
+        for (int y = 0; y < height; ++y) {
+            int tmp_const = 0;
+            int b_1 = 0;
+            for (const SkPMColor* p = lp; p <= up; p += srcStrideX) {
+                __asm__ volatile (
+                    "lw          %[b_1],       0(%[p])                    \n\t"
+                    "cmpu.lt.qb  %[tmp_const], %[b_1]                     \n\t"
+                    "pick.qb     %[tmp_const], %[b_1],   %[tmp_const]     \n\t"
+                    : [b_1]"=&r"(b_1), [tmp_const]"+r"(tmp_const)
+                    : [p]"r"(p)
+                    : "memory"
+                );
+            }
+            *dptr =  tmp_const;
+            dptr += dstStrideY;
+            lp += srcStrideY;
+            up += srcStrideY;
+        }
+
+        if (x >= radius) src += srcStrideX;
+        if (x + radius < width - 1) upperSrc += srcStrideX;
+        dst += dstStrideX;
+    }
+}
+#endif  // SK_CPU_MIPS
 
 static void callProcX(SkMorphologyImageFilter::Proc procX, const SkBitmap& src, SkBitmap* dst, int radiusX, const SkIRect& bounds)
 {

@@ -133,6 +133,18 @@ setup_device() {
       DEFINES="${DEFINES} skia_resource_cache_mb_limit=32"
       ANDROID_ARCH="mips"
       ;;
+    mips32r2dsp)
+      DEFINES="${DEFINES} skia_arch_type=mips skia_arch_width=32"
+      DEFINES="${DEFINES} skia_resource_cache_mb_limit=32"
+      DEFINES="${DEFINES} mips_arch_variant=mips32r2 mips_dsp=1"
+      ANDROID_ARCH="mips"
+      ;;
+    mips32r2dspr2)
+      DEFINES="${DEFINES} skia_arch_type=mips skia_arch_width=32"
+      DEFINES="${DEFINES} skia_resource_cache_mb_limit=32"
+      DEFINES="${DEFINES} mips_arch_variant=mips32r2 mips_dsp=2"
+      ANDROID_ARCH="mips"
+      ;;
     *)
       if [ -z "$ANDROID_IGNORE_UNKNOWN_DEVICE" ]; then
           echo "ERROR: unknown device $TARGET_DEVICE"

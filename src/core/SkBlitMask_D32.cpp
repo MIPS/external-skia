@@ -9,6 +9,167 @@
 #include "SkColor.h"
 #include "SkColorPriv.h"
 
+#ifdef SK_CPU_MIPS
+#define STR1(x) #x
+#define STR(x) STR1(x)
+
+#define D32_A8_MULQ(A, B, C, D)                                                        \
+        "muleu_s.ph.qbl %[temp1],  %["#A"],   %[temp0]                  \n\t"          \
+        "muleu_s.ph.qbr %[temp2],  %["#A"],   %[temp0]                  \n\t"          \
+        "muleu_s.ph.qbl %[temp5],  %["#B"],   %[temp4]                  \n\t"          \
+        "muleu_s.ph.qbr %[temp6],  %["#B"],   %[temp4]                  \n\t"          \
+        "precrq.qb.ph   %["#C"],   %[temp1],  %[temp2]                  \n\t"          \
+        "precrq.qb.ph   %["#D"],   %[temp5],  %[temp6]                  \n\t"
+
+#define D32_A8_COLOR_OPAQUE_BLACK(COLOR, OPAQUE, BLACK)                                \
+    __asm__ volatile (                                                                 \
+        "lbu            %[temp3],  0(%[mask])                           \n\t"          \
+        "lbu            %[temp7],  1(%[mask])                           \n\t"          \
+    ".if "#COLOR"                                                       \n\t"          \
+        "addiu          %[temp3],  %[temp3],  1                         \n\t"          \
+        "addiu          %[temp7],  %[temp7],  1                         \n\t"          \
+        "replv.ph       %[temp0],  %[temp3]                             \n\t"          \
+        "replv.ph       %[temp4],  %[temp7]                             \n\t"          \
+        D32_A8_MULQ(pmc, pmc, temp8, temp9)                                            \
+    ".endif                                                             \n\t"          \
+        "ulw            %[temp2],  0(%[device])                         \n\t"          \
+        "ulw            %[temp6],  4(%[device])                         \n\t"          \
+    ".if "#OPAQUE" || "#BLACK"                                          \n\t"          \
+        "subu           %[temp0],  %[c256],   %[temp3]                  \n\t"          \
+        "subu           %[temp4],  %[c256],   %[temp7]                  \n\t"          \
+        "replv.ph       %[temp0],  %[temp0]                             \n\t"          \
+        "replv.ph       %[temp4],  %[temp4]                             \n\t"          \
+        D32_A8_MULQ(temp2, temp6, temp8, temp9)                                        \
+    ".endif                                                             \n\t"          \
+        "addiu          %[mask],   %[mask],   2                         \n\t"          \
+    ".if "#COLOR"                                                       \n\t"          \
+        "ext            %[temp1],  %[pmc],    "STR(SK_A32_SHIFT)", 8    \n\t"          \
+        "replv.ph       %[temp1],  %[temp1]                             \n\t"          \
+        "ins            %[temp3],  %[temp7],  16,                  16   \n\t"          \
+        "mul.ph         %[temp3],  %[temp1],  %[temp3]                  \n\t"          \
+        "ext            %[temp4],  %[temp3],  24,                  8    \n\t"          \
+        "ext            %[temp0],  %[temp3],  8,                   8    \n\t"          \
+        "subu           %[temp0],  %[c256],   %[temp0]                  \n\t"          \
+        "subu           %[temp4],  %[c256],   %[temp4]                  \n\t"          \
+        "replv.ph       %[temp0],  %[temp0]                             \n\t"          \
+        "replv.ph       %[temp4],  %[temp4]                             \n\t"          \
+        D32_A8_MULQ(temp2, temp6, temp0, temp4)                                        \
+        "addu           %[temp3],  %[temp8],  %[temp0]                  \n\t"          \
+        "addu           %[temp7],  %[temp9],  %[temp4]                  \n\t"          \
+    ".endif                                                             \n\t"          \
+        "addiu          %[device], %[device], 8                         \n\t"          \
+    ".if "#OPAQUE"                                                      \n\t"          \
+        "addiu          %[temp3],  %[temp3],  1                         \n\t"          \
+        "addiu          %[temp7],  %[temp7],  1                         \n\t"          \
+        "replv.ph       %[temp0],  %[temp3]                             \n\t"          \
+        "replv.ph       %[temp4],  %[temp7]                             \n\t"          \
+        D32_A8_MULQ(pmc, pmc, temp0, temp4)                                            \
+        "addu           %[temp3],  %[temp8],  %[temp0]                  \n\t"          \
+        "addu           %[temp7],  %[temp9],  %[temp4]                  \n\t"          \
+    ".endif                                                             \n\t"          \
+    ".if "#BLACK"                                                       \n\t"          \
+        "sll            %[temp3],  %[temp3],  "STR(SK_A32_SHIFT)"       \n\t"          \
+        "sll            %[temp7],  %[temp7],  "STR(SK_A32_SHIFT)"       \n\t"          \
+        "addu           %[temp3],  %[temp3],  %[temp8]                  \n\t"          \
+        "addu           %[temp7],  %[temp7],  %[temp9]                  \n\t"          \
+    ".endif                                                             \n\t"          \
+        "usw            %[temp3],  -8(%[device])                        \n\t"          \
+        "usw            %[temp7],  -4(%[device])                        \n\t"          \
+        : [temp0]"=&r"(temp0), [temp1]"=&r"(temp1), [temp2]"=&r"(temp2),               \
+          [temp3]"=&r"(temp3), [temp4]"=&r"(temp4), [temp5]"=&r"(temp5),               \
+          [temp6]"=&r"(temp6), [temp7]"=&r"(temp7), [temp8]"=&r"(temp8),               \
+          [temp9]"=&r"(temp9), [mask]"+r"(mask), [device]"+r"(device)                  \
+        : [c256]"r"(c256), [pmc]"r"(pmc)                                               \
+        : "memory", "hi", "lo"                                                         \
+    );
+
+static void D32_A8_Color(void* SK_RESTRICT dst, size_t dstRB,
+                         const void* SK_RESTRICT maskPtr, size_t maskRB,
+                         SkColor color, int width, int height) {
+    SkPMColor pmc = SkPreMultiplyColor(color);
+    SkPMColor* SK_RESTRICT device = (SkPMColor *)dst;
+    const uint8_t* SK_RESTRICT mask = (const uint8_t*)maskPtr;
+    const int c256 = 256;
+    int temp0, temp1, temp2, temp3, temp4, temp5, temp6, temp7, temp8, temp9;
+
+    maskRB -= width;
+    dstRB -= (width << 2);
+    do {
+        int w = width;
+        while (w >= 2) {
+            D32_A8_COLOR_OPAQUE_BLACK(1, 0, 0)
+            w -= 2;
+        }
+        if (w) {
+            unsigned aa = *mask++;
+            *device = SkBlendARGB32(pmc, *device, aa);
+            device += 1;
+        }
+        device = (uint32_t*)((char*)device + dstRB);
+        mask += maskRB;
+    } while (--height != 0);
+}
+
+static void D32_A8_Opaque(void* SK_RESTRICT dst, size_t dstRB,
+                          const void* SK_RESTRICT maskPtr, size_t maskRB,
+                          SkColor color, int width, int height) {
+    SkPMColor pmc = SkPreMultiplyColor(color);
+    SkPMColor* SK_RESTRICT device = (SkPMColor*)dst;
+    const uint8_t* SK_RESTRICT mask = (const uint8_t*)maskPtr;
+    const int c256 = 256;
+    int temp0, temp1, temp2, temp3, temp4, temp5, temp6, temp7, temp8, temp9;
+
+    maskRB -= width;
+    dstRB -= (width << 2);
+    do {
+        int w = width;
+        while (w >= 2) {
+            D32_A8_COLOR_OPAQUE_BLACK(0, 1, 0)
+            w -= 2;
+        }
+        if (w) {
+            unsigned aa = *mask++;
+            *device = SkAlphaMulQ(pmc, SkAlpha255To256(aa)) +
+                                  SkAlphaMulQ(*device, SkAlpha255To256(255 - aa));
+            device += 1;
+        }
+        device = (uint32_t*)((char*)device + dstRB);
+        mask += maskRB;
+    } while (--height != 0);
+}
+
+static void D32_A8_Black(void* SK_RESTRICT dst, size_t dstRB,
+                         const void* SK_RESTRICT maskPtr, size_t maskRB,
+                         SkColor, int width, int height) {
+    SkPMColor* SK_RESTRICT device = (SkPMColor*)dst;
+    const uint8_t* SK_RESTRICT mask = (const uint8_t*)maskPtr;
+    const int c256 = 256;
+    int temp0, temp1, temp2, temp3, temp4, temp5, temp6, temp7, temp8, temp9;
+    int pmc = 0;
+
+    maskRB -= width;
+    dstRB -= (width << 2);
+    do {
+        int w = width;
+
+        while (w >= 2) {
+            D32_A8_COLOR_OPAQUE_BLACK(0, 0, 1)
+            w -= 2;
+        }
+        if (w) {
+            unsigned aa = *mask++;
+            *device = (aa << SK_A32_SHIFT) + SkAlphaMulQ(*device, SkAlpha255To256(255 - aa));
+            device += 1;
+        }
+        device = (uint32_t*)((char*)device + dstRB);
+        mask += maskRB;
+    } while (--height != 0);
+}
+#undef D32_A8_COLOR_OPAQUE_BLACK
+#undef D32_A8_MULQ
+#undef STR
+#undef STR1
+#else // SK_CPU_MIPS
 static void D32_A8_Color(void* SK_RESTRICT dst, size_t dstRB,
                          const void* SK_RESTRICT maskPtr, size_t maskRB,
                          SkColor color, int width, int height) {
@@ -70,6 +231,7 @@ static void D32_A8_Black(void* SK_RESTRICT dst, size_t dstRB,
         mask += maskRB;
     } while (--height != 0);
 }
+#endif // SK_CPU_MIPS
 
 SkBlitMask::BlitLCD16RowProc SkBlitMask::BlitLCD16RowFactory(bool isOpaque) {
     BlitLCD16RowProc proc = PlatformBlitRowProcs16(isOpaque);

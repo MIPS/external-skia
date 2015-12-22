@@ -11,7 +11,7 @@
 #include "SkMathPriv.h"
 
 ///////////////////////////////////////////////////////////////////////////////
-
+#ifndef SK_CPU_MIPS
 static void S32_D565_Opaque(uint16_t* SK_RESTRICT dst,
                             const SkPMColor* SK_RESTRICT src, int count,
                             U8CPU alpha, int /*x*/, int /*y*/) {
@@ -25,6 +25,65 @@ static void S32_D565_Opaque(uint16_t* SK_RESTRICT dst,
         } while (--count != 0);
     }
 }
+#else
+#define STR1(x) #x
+#define STR(x) STR1(x)
+static void S32_D565_Opaque(uint16_t* SK_RESTRICT dst,
+                            const SkPMColor* SK_RESTRICT src, int count,
+                            U8CPU alpha, int /*x*/, int /*y*/) {
+    SkASSERT(255 == alpha);
+    if (count > 0) {
+        int temp0, temp1, temp2, temp3, temp4;
+        SkPMColor* const loopEnd = (SkPMColor*)src + count;
+
+        __asm__ volatile (
+            ".set    push                                                                     \n\t"
+            ".set    noreorder                                                                \n\t"
+            "andi    %[temp4],  %[count],    1                                                \n\t"
+            "beq     %[temp4],  $zero,       1f                                               \n\t"
+            " srl    %[count],  %[count],    1                                                \n\t"
+            "lw      %[temp0],  0(%[src])                                                     \n\t"
+            "addiu   %[src],    %[src],      4                                                \n\t"
+            "ext     %[temp1],  %[temp0],    "STR((SK_B32_SHIFT + (8 - SK_B16_BITS)))",  5    \n\t"
+            "ext     %[temp2],  %[temp0],    "STR((SK_G32_SHIFT + (8 - SK_G16_BITS)))",  6    \n\t"
+            "ext     %[temp3],  %[temp0],    "STR((SK_R32_SHIFT + (8 - SK_R16_BITS)))",  5    \n\t"
+            "ins     %[temp4],  %[temp1],    "STR(SK_B16_SHIFT)",                        5    \n\t"
+            "ins     %[temp4],  %[temp2],    "STR(SK_G16_SHIFT)",                        6    \n\t"
+            "ins     %[temp4],  %[temp3],    "STR(SK_R16_SHIFT)",                        5    \n\t"
+            "sh      %[temp4],  0(%[dst])                                                     \n\t"
+            "beq     %[src],    %[loopEnd],  2f                                               \n\t"
+            " addiu  %[dst],    %[dst],      2                                                \n\t"
+        "1:                                                                                   \n\t"
+            "lw      %[temp0],  0(%[src])                                                     \n\t"
+            "ext     %[temp1],  %[temp0],    "STR((SK_B32_SHIFT + (8 - SK_B16_BITS)))",  5    \n\t"
+            "ext     %[temp2],  %[temp0],    "STR((SK_G32_SHIFT + (8 - SK_G16_BITS)))",  6    \n\t"
+            "ext     %[temp3],  %[temp0],    "STR((SK_R32_SHIFT + (8 - SK_R16_BITS)))",  5    \n\t"
+            "lw      %[temp0],  4(%[src])                                                     \n\t"
+            "ins     %[temp4],  %[temp1],    "STR(SK_B16_SHIFT)",                        5    \n\t"
+            "ins     %[temp4],  %[temp2],    "STR(SK_G16_SHIFT)",                        6    \n\t"
+            "ins     %[temp4],  %[temp3],    "STR(SK_R16_SHIFT)",                        5    \n\t"
+            "ext     %[temp1],  %[temp0],    "STR((SK_B32_SHIFT + (8 - SK_B16_BITS)))",  5    \n\t"
+            "ext     %[temp2],  %[temp0],    "STR((SK_G32_SHIFT + (8 - SK_G16_BITS)))",  6    \n\t"
+            "ext     %[temp3],  %[temp0],    "STR((SK_R32_SHIFT + (8 - SK_R16_BITS)))",  5    \n\t"
+            "ins     %[temp4],  %[temp1],    "STR(SK_B16_SHIFT + 16)",                   5    \n\t"
+            "ins     %[temp4],  %[temp2],    "STR(SK_G16_SHIFT + 16)",                   6    \n\t"
+            "ins     %[temp4],  %[temp3],    "STR(SK_R16_SHIFT + 16)",                   5    \n\t"
+            "addiu   %[src],    %[src],      8                                                \n\t"
+            "usw     %[temp4],  0(%[dst])                                                     \n\t"
+            "bne     %[src],    %[loopEnd],  1b                                               \n\t"
+            " addiu  %[dst],    %[dst],      4                                                \n\t"
+        "2:                                                                                   \n\t"
+            ".set   pop                                                                       \n\t"
+            : [src]"+r"(src), [dst]"+r"(dst), [count]"+r"(count), [temp0]"=&r"(temp0),
+              [temp1]"=&r"(temp1), [temp2]"=&r"(temp2), [temp3]"=&r"(temp3), [temp4]"=&r"(temp4)
+            : [loopEnd]"r"(loopEnd)
+            : "memory"
+        );
+    }
+}
+#undef STR
+#undef STR1
+#endif // SK_CPU_MIPS
 
 static void S32_D565_Blend(uint16_t* SK_RESTRICT dst,
                              const SkPMColor* SK_RESTRICT src, int count,

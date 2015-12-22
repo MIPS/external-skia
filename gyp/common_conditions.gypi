@@ -187,7 +187,7 @@
           [ 'skia_android_framework==0', {
             'cflags': [
               # This flag is not supported by Android build system.
-              '-Wno-c++11-extensions',
+              # '-Wno-c++11-extensions',
             ],
           }],
           [ 'skia_warnings_as_errors', {
@@ -255,6 +255,9 @@
             'cflags': [
               '-EL',
             ],
+            'defines': [
+              'SK_CPU_MIPS',
+            ],
             'conditions': [
               [ 'mips_arch_variant == "mips32r2"', {
                 'cflags': [
@@ -265,13 +268,17 @@
                     'cflags': [
                       '-mdsp',
                     ],
+                    'defines': [
+                      'SK_MIPS_HAS_DSP',
+                    ],
                   }],
                   [ 'mips_dsp == 2', {
                     'cflags': [
                       '-mdspr2',
                     ],
                     'defines': [
-                      '__MIPS_HAVE_DSPR2',
+                      'SK_MIPS_HAS_DSP',
+                      'SK_MIPS_HAS_DSPR2',
                     ],
                   }],
                 ],

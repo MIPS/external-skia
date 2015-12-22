@@ -102,7 +102,6 @@
         }],
         [ 'skia_arch_type == "mips"', {
           'sources': [
-            '../src/opts/SkBitmapProcState_opts_none.cpp',
             '../src/opts/SkBlitMask_opts_none.cpp',
             '../src/opts/SkBlurImage_opts_none.cpp',
             '../src/opts/SkMorphology_opts_none.cpp',
@@ -113,10 +112,14 @@
             [ '(mips_arch_variant == "mips32r2") \
                 and (mips_dsp == 1 or mips_dsp == 2)', {
               'sources': [
+                '../src/opts/SkBitmapProcState_mips_dsp.cpp',
+                '../src/opts/SkBitmapProcState_opts_mips_dsp.cpp',
+                '../src/opts/SkBitmapProcState_matrixProcs_mips_dsp.cpp',
                 '../src/opts/SkBlitRow_opts_mips_dsp.cpp',
               ],
             }, {
               'sources': [
+                '../src/opts/SkBitmapProcState_opts_none.cpp',
                 '../src/opts/SkBlitRow_opts_none.cpp',
               ],
             }],

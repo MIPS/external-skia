@@ -643,16 +643,25 @@ LOCAL_SRC_FILES_x86_64 += \
 	src/opts/SkBitmapProcState_opts_SSSE3.cpp
 
 LOCAL_CFLAGS_mips += \
-	-EL
+	-EL \
+	-mdspr2 \
+	-DSK_CPU_MIPS \
+	-DSK_MIPS_HAS_DSP \
+	-DSK_MIPS_HAS_DSPR2
 
 LOCAL_SRC_FILES_mips += \
-	src/opts/SkBitmapProcState_opts_none.cpp \
+	src/opts/SkBitmapProcState_opts_mips_dsp.cpp \
+	src/opts/SkBitmapProcState_matrixProcs_mips_dsp.cpp \
+	src/opts/SkBitmapProcState_mips_dsp.cpp \
 	src/opts/SkBlitMask_opts_none.cpp \
 	src/opts/SkBlurImage_opts_none.cpp \
 	src/opts/SkMorphology_opts_none.cpp \
 	src/opts/SkUtils_opts_none.cpp \
 	src/opts/SkXfermode_opts_none.cpp \
-	src/opts/SkBlitRow_opts_none.cpp
+	src/opts/SkBlitRow_opts_mips_dsp.cpp
+
+LOCAL_CFLAGS_mips64 += \
+	-EL
 
 LOCAL_SRC_FILES_mips64 += \
 	src/opts/SkBitmapProcState_opts_none.cpp \
