@@ -14,86 +14,194 @@
 static void S32_D565_Blend_mips_dsp(uint16_t* SK_RESTRICT dst,
                                     const SkPMColor* SK_RESTRICT src, int count,
                                     U8CPU alpha, int /*x*/, int /*y*/) {
-    register uint32_t t0, t1, t2, t3, t4, t5, t6;
-    register uint32_t s0, s1, s2, s4, s5, s6;
+    if (count > 0) {
+        int scale = SkAlpha255To256(alpha);
+        register uint32_t t0, t1, t2, t3, t4, t5, t6;
+        register uint32_t s0, s1, s2, s3, s4, s5, s6;
 
-    alpha += 1;
-    if (count >= 2) {
+        do {
+            __asm__ volatile (
+               ".set             push                          \n\t"
+               ".set             noreorder                     \n\t"
+                "lw              %[s0],    0(%[src])           \n\t"
+                "lh              %[t0],    0(%[dst])           \n\t"
+                "srl             %[t2],    %[t0],    5         \n\t"
+                "srl             %[t3],    %[t0],    11        \n\t"
+                "andi            %[t1],    %[t0],    0x1f      \n\t"
+                "andi            %[t2],    %[t2],    0x3f      \n\t"
+                "andi            %[t3],    %[t3],    0x1f      \n\t"
+                "srl             %[s3],    %[s0],    19        \n\t"
+                "srl             %[s2],    %[s0],    10        \n\t"
+                "srl             %[s1],    %[s0],    3         \n\t"
+                "andi            %[s3],    %[s3],    0x1f      \n\t"
+                "andi            %[s2],    %[s2],    0x3f      \n\t"
+                "andi            %[s1],    %[s1],    0x1f      \n\t"
+                "subu            %[t6],    %[s3],    %[t3]     \n\t"
+                "subu            %[t5],    %[s2],    %[t2]     \n\t"
+                "subu            %[t4],    %[s1],    %[t1]     \n\t"
+                "mul             %[t6],    %[t6],    %[scale]  \n\t"
+                "mul             %[t5],    %[t5],    %[scale]  \n\t"
+                "mul             %[t4],    %[t4],    %[scale]  \n\t"
+                "srl             %[t6],    %[t6],    8         \n\t"
+                "srl             %[t5],    %[t5],    8         \n\t"
+                "srl             %[t4],    %[t4],    8         \n\t"
+                "addu            %[t6],    %[t6],    %[t3]     \n\t"
+                "addu            %[t5],    %[t5],    %[t2]     \n\t"
+                "addu            %[t4],    %[t4],    %[t1]     \n\t"
+                "sll             %[t6],    %[t6],    11        \n\t"
+                "sll             %[t5],    %[t5],    5         \n\t"
+                "or              %[t6],    %[t6],    %[t5]     \n\t"
+                "or              %[t6],    %[t6],    %[t4]     \n\t"
+                "sh              %[t6],    0(%[dst])           \n\t"
+                ".set            pop                           \n\t"
+                : [t0]"=&r"(t0), [t1]"=&r"(t1), [t2]"=&r"(t2), [t3]"=&r"(t3),
+                  [t4]"=&r"(t4), [t5]"=&r"(t5), [t6]"=&r"(t6), [s0]"=&r"(s0),
+                  [s1]"=&r"(s1), [s2]"=&r"(s2), [s4]"=&r"(s4), [s3]"=&r"(s3),
+                  [s5]"=&r"(s5), [s6]"=&r"(s6), [count]"+r"(count),
+                  [dst]"+r"(dst), [src]"+r"(src)
+                : [scale]"r"(scale)
+                : "memory", "hi", "lo"
+            );
+            src++;
+            dst++;
+        } while (--count != 0);
+    }
+}
+
+static void S32A_D565_Opaque_Dither_mips_dsp(uint16_t* __restrict__ dst,
+                                             const SkPMColor* __restrict__ src,
+                                             int count, U8CPU alpha, int x, int y) {
+    register int32_t t0, t1, t2, t3, t4, t5, t6;
+    register int32_t t7, t8, t9, s0, s1, s2, s3;
+    const uint16_t dither_scan = gDitherMatrix_3Bit_16[(y) & 3];
+    for (; count >=2; count -=2)
+    {
         __asm__ volatile (
-           ".set             push                          \n\t"
-           ".set             noreorder                     \n\t"
-            "replv.ph        %[s4],    %[alpha]            \n\t"
-            "repl.ph         %[s5],    0x1f                \n\t"
-            "repl.ph         %[s6],    0x3f                \n\t"
-        "1:                                                \n\t"
-            "lw              %[s2],    0(%[src])           \n\t"
-            "lw              %[s1],    4(%[src])           \n\t"
-            "lwr             %[s0],    0(%[dst])           \n\t"
-            "lwl             %[s0],    3(%[dst])           \n\t"
-            "and             %[t1],    %[s0],    %[s5]     \n\t"
-            "shra.ph         %[t0],    %[s0],    5         \n\t"
-            "and             %[t2],    %[t0],    %[s6]     \n\t"
-            "shrl.ph         %[t3],    %[s0],    11        \n\t"
-            "precrq.ph.w     %[t0],    %[s1],    %[s2]     \n\t"
-            "shrl.qb         %[t5],    %[t0],    3         \n\t"
-            "and             %[t4],    %[t5],    %[s5]     \n\t"
-            "ins             %[s2],    %[s1],    16, 16    \n\t"
-            "preceu.ph.qbra  %[t0],    %[s2]               \n\t"
-            "shrl.qb         %[t6],    %[t0],    3         \n\t"
-            "shrl.ph         %[t5],    %[s2],    10        \n\t"
-            "subu.ph         %[t4],    %[t4],    %[t1]     \n\t"
-            "subu.ph         %[t5],    %[t5],    %[t2]     \n\t"
-            "subu.ph         %[t6],    %[t6],    %[t3]     \n\t"
-            "mul.ph          %[t4],    %[s4],    %[t4]     \n\t"
-            "mul.ph          %[t5],    %[s4],    %[t5]     \n\t"
-            "mul.ph          %[t6],    %[s4],    %[t6]     \n\t"
-            "addiu           %[count], %[count], -2        \n\t"
-            "addiu           %[src],   %[src],   8         \n\t"
-            "shra.ph         %[t4],    %[t4],    8         \n\t"
-            "shra.ph         %[t5],    %[t5],    8         \n\t"
-            "shra.ph         %[t6],    %[t6],    8         \n\t"
-            "addu.qb         %[t4],    %[t4],    %[t1]     \n\t"
-            "addu.qb         %[t5],    %[t5],    %[t2]     \n\t"
-            "addu.qb         %[t6],    %[t6],    %[t3]     \n\t"
-            "and             %[t6],    %[t6],    %[s5]     \n\t"
-            "and             %[t5],    %[t5],    %[s6]     \n\t"
-            "and             %[t4],    %[t4],    %[s5]     \n\t"
-            "andi            %[s0],    %[t4],    0xffff    \n\t"
-            "andi            %[t0],    %[t5],    0xffff    \n\t"
-            "sll             %[t0],    %[t0],    0x5       \n\t"
-            "or              %[s0],    %[s0],    %[t0]     \n\t"
-            "sll             %[t0],    %[t6],    0xb       \n\t"
-            "or              %[t0],    %[t0],    %[s0]     \n\t"
-            "sh              %[t0],    0(%[dst])           \n\t"
-            "srl             %[s1],    %[t4],    16        \n\t"
-            "srl             %[t0],    %[t5],    16        \n\t"
-            "sll             %[t5],    %[t0],    5         \n\t"
-            "or              %[t0],    %[t5],    %[s1]     \n\t"
-            "srl             %[s0],    %[t6],    16        \n\t"
-            "sll             %[s2],    %[s0],    0xb       \n\t"
-            "or              %[s1],    %[s2],    %[t0]     \n\t"
-            "sh              %[s1],    2(%[dst])           \n\t"
-            "bge             %[count], 2,        1b        \n\t"
-            " addiu          %[dst],   %[dst],   4         \n\t"
-            ".set            pop                           \n\t"
-            : [t0]"=&r"(t0), [t1]"=&r"(t1), [t2]"=&r"(t2), [t3]"=&r"(t3),
-              [t4]"=&r"(t4), [t5]"=&r"(t5), [t6]"=&r"(t6), [s0]"=&r"(s0),
-              [s1]"=&r"(s1), [s2]"=&r"(s2), [s4]"=&r"(s4), [s5]"=&r"(s5),
-              [s6]"=&r"(s6), [count]"+r"(count), [dst]"+r"(dst),
-              [src]"+r"(src)
-            : [alpha]"r"(alpha)
+            ".set            push                                \n\t"
+            ".set            noreorder                           \n\t"
+            "li              %[s1],    0x01010101                \n\t"
+            "li              %[s2],    -2017                     \n\t"
+            "lw              %[t1],    0(%[src])                 \n\t"
+            "lw              %[t2],    4(%[src])                 \n\t"
+            "andi            %[t3],    %[x],     0x3             \n\t"
+            "addiu           %[x],     %[x],     1               \n\t"
+            "sll             %[t4],    %[t3],    2               \n\t"
+            "srav            %[t5],    %[dither_scan], %[t4]     \n\t"
+            "andi            %[t3],    %[t5],    0xf             \n\t"
+            "andi            %[t4],    %[x],     0x3             \n\t"
+            "sll             %[t5],    %[t4],    2               \n\t"
+            "srav            %[t6],    %[dither_scan], %[t5]     \n\t"
+            "addiu           %[x],     %[x],     1               \n\t"
+            "ins             %[t3],    %[t6],    8,    4         \n\t"
+            "srl             %[t4],    %[t1],    24              \n\t"
+            "addiu           %[t0],    %[t4],    1               \n\t"
+            "srl             %[t4],    %[t2],    24              \n\t"
+            "addiu           %[t5],    %[t4],    1               \n\t"
+            "ins             %[t0],    %[t5],    16,   16        \n\t"
+            "muleu_s.ph.qbr  %[t4],    %[t3],    %[t0]           \n\t"
+            "preceu.ph.qbla  %[t3],    %[t4]                     \n\t"
+            "andi            %[t4],    %[t1],    0xff            \n\t"
+            "ins             %[t4],    %[t2],    16,   8         \n\t"
+            "shrl.qb         %[t5],    %[t4],    5               \n\t"
+            "subu.qb         %[t6],    %[t3],    %[t5]           \n\t"
+            "addq.ph         %[t5],    %[t6],    %[t4]           \n\t"
+            "ext             %[t4],    %[t1],    8,    8         \n\t"
+            "srl             %[t6],    %[t2],    8               \n\t"
+            "ins             %[t4],    %[t6],    16,   8         \n\t"
+            "shrl.qb         %[t6],    %[t4],    6               \n\t"
+            "shrl.qb         %[t7],    %[t3],    1               \n\t"
+            "subu.qb         %[t8],    %[t7],    %[t6]           \n\t"
+            "addq.ph         %[t6],    %[t8],    %[t4]           \n\t"
+            "ext             %[t4],    %[t1],    16,   8         \n\t"
+            "srl             %[t7],    %[t2],    16              \n\t"
+            "ins             %[t4],    %[t7],    16,   8         \n\t"
+            "shrl.qb         %[t7],    %[t4],    5               \n\t"
+            "subu.qb         %[t8],    %[t3],    %[t7]           \n\t"
+            "addq.ph         %[t7],    %[t8],    %[t4]           \n\t"
+            "andi            %[t9],    %[t5],    0xff            \n\t"
+            "sll             %[t9],    %[t9],    2               \n\t"
+            "srl             %[s0],    %[t5],    16              \n\t"
+            "andi            %[s0],    %[s0],    0xff            \n\t"
+            "sll             %[s0],    %[s0],    2               \n\t"
+            "andi            %[t3],    %[t6],    0xff            \n\t"
+            "srl             %[t4],    %[t6],    16              \n\t"
+            "andi            %[t4],    %[t4],    0xff            \n\t"
+            "andi            %[t6],    %[t7],    0xff            \n\t"
+            "srl             %[t7],    %[t7],    16              \n\t"
+            "andi            %[t7],    %[t7],    0xff            \n\t"
+            "subq.ph         %[t5],    %[s1],    %[t0]           \n\t"
+            "srl             %[t0],    %[t5],    3               \n\t"
+            "lhu             %[t5],    0(%[dst])                 \n\t"
+            "sll             %[t1],    %[t6],    13              \n\t"
+            "or              %[t8],    %[t9],    %[t1]           \n\t"
+            "sll             %[t1],    %[t3],    24              \n\t"
+            "or              %[t9],    %[t1],    %[t8]           \n\t"
+            "andi            %[t3],    %[t5],    0x7e0           \n\t"
+            "sll             %[t6],    %[t3],    0x10            \n\t"
+            "and             %[t8],    %[s2],    %[t5]           \n\t"
+            "or              %[t5],    %[t6],    %[t8]           \n\t"
+            "andi            %[t6],    %[t0],    0xff            \n\t"
+            "mul             %[t1],    %[t6],    %[t5]           \n\t"
+            "addu            %[t5],    %[t1],    %[t9]           \n\t"
+            "srl             %[t6],    %[t5],    5               \n\t"
+            "and             %[t5],    %[s2],    %[t6]           \n\t"
+            "srl             %[t8],    %[t6],    16              \n\t"
+            "andi            %[t6],    %[t8],    0x7e0           \n\t"
+            "or              %[t1],    %[t5],    %[t6]           \n\t"
+            "sh              %[t1],    0(%[dst])                 \n\t"
+            "lhu             %[t5],    2(%[dst])                 \n\t"
+            "sll             %[t1],    %[t7],    13              \n\t"
+            "or              %[t8],    %[s0],    %[t1]           \n\t"
+            "sll             %[t1],    %[t4],    24              \n\t"
+            "or              %[t9],    %[t1],    %[t8]           \n\t"
+            "andi            %[t3],    %[t5],    0x7e0           \n\t"
+            "sll             %[t6],    %[t3],    0x10            \n\t"
+            "and             %[t8],    %[s2],    %[t5]           \n\t"
+            "or              %[t5],    %[t6],    %[t8]           \n\t"
+            "srl             %[t6],    %[t0],    16              \n\t"
+            "mul             %[t1],    %[t6],    %[t5]           \n\t"
+            "addu            %[t5],    %[t1],    %[t9]           \n\t"
+            "srl             %[t6],    %[t5],    5               \n\t"
+            "and             %[t5],    %[s2],    %[t6]           \n\t"
+            "srl             %[t8],    %[t6],    16              \n\t"
+            "andi            %[t6],    %[t8],    0x7e0           \n\t"
+            "or              %[t1],    %[t5],    %[t6]           \n\t"
+            "sh              %[t1],    2(%[dst])                 \n\t"
+            ".set            pop                                 \n\t"
+            : [src]"+r"(src), [dst]"+r"(dst), [x]"+r"(x),
+              [t0]"=&r"(t0), [t1]"=&r"(t1), [t2]"=&r"(t2),
+              [t3]"=&r"(t3), [t4]"=&r"(t4), [t5]"=&r"(t5),
+              [t6]"=&r"(t6), [t7]"=&r"(t7), [t8]"=&r"(t8),
+              [t9]"=&r"(t9), [s0]"=&r"(s0), [s1]"=&r"(s1),
+              [s2]"=&r"(s2), [s3]"=&r"(s3)
+            : [dither_scan]"r"(dither_scan)
             : "memory", "hi", "lo"
         );
+        dst += 2;
+        src += 2;
     }
-
     if (count == 1) {
         SkPMColor c = *src++;
         SkPMColorAssert(c);
-        SkASSERT(SkGetPackedA32(c) == 255);
-        uint16_t d = *dst;
-        *dst++ = SkPackRGB16(SkAlphaBlend(SkPacked32ToR16(c), SkGetPackedR16(d), alpha),
-                             SkAlphaBlend(SkPacked32ToG16(c), SkGetPackedG16(d), alpha),
-                             SkAlphaBlend(SkPacked32ToB16(c), SkGetPackedB16(d), alpha));
+        if (c) {
+            unsigned a = SkGetPackedA32(c);
+            int d = SkAlphaMul(DITHER_VALUE(x), SkAlpha255To256(a));
+
+            unsigned sr = SkGetPackedR32(c);
+            unsigned sg = SkGetPackedG32(c);
+            unsigned sb = SkGetPackedB32(c);
+            sr = SkDITHER_R32_FOR_565(sr, d);
+            sg = SkDITHER_G32_FOR_565(sg, d);
+            sb = SkDITHER_B32_FOR_565(sb, d);
+
+            uint32_t src_expanded = (sg << 24) | (sr << 13) | (sb << 2);
+            uint32_t dst_expanded = SkExpand_rgb_16(*dst);
+            dst_expanded = dst_expanded * (SkAlpha255To256(255 - a) >> 3);
+            // now src and dst expanded are in g:11 r:10 x:1 b:10
+            *dst = SkCompact_rgb_16((src_expanded + dst_expanded) >> 5);
+        }
+        dst += 1;
+        DITHER_INC_X(x);
     }
 }
 
@@ -138,17 +246,11 @@ static void S32_D565_Opaque_Dither_mips_dsp(uint16_t* __restrict__ dst,
         "lw              %[t2],    4(%[src])           \n\t"
         "precrq.ph.w     %[t3],    %[t0],    %[t2]     \n\t"
         "preceu.ph.qbra  %[t9],    %[t3]               \n\t"
-#ifdef SK_MIPS_HAS_DSPR2
-        "append          %[t0],    %[t2],    16        \n\t"
-        "preceu.ph.qbra  %[t4],    %[t0]               \n\t"
-        "preceu.ph.qbla  %[t5],    %[t0]               \n\t"
-#else
         "sll             %[t6],    %[t0],    16        \n\t"
         "sll             %[t7],    %[t2],    16        \n\t"
         "precrq.ph.w     %[t8],    %[t6],    %[t7]     \n\t"
         "preceu.ph.qbra  %[t4],    %[t8]               \n\t"
         "preceu.ph.qbla  %[t5],    %[t8]               \n\t"
-#endif
         "addu.qb         %[t0],    %[t4],    %[t1]     \n\t"
         "shra.ph         %[t2],    %[t4],    5         \n\t"
         "subu.qb         %[t3],    %[t0],    %[t2]     \n\t"
@@ -163,13 +265,9 @@ static void S32_D565_Opaque_Dither_mips_dsp(uint16_t* __restrict__ dst,
         "subu.qb         %[t4],    %[t3],    %[t2]     \n\t"
         "shra.ph         %[t8],    %[t4],    2         \n\t"
         "precrq.ph.w     %[t0],    %[t6],    %[t7]     \n\t"
-#ifdef SK_MIPS_HAS_DSPR2
-        "append          %[t6],    %[t7],    16        \n\t"
-#else
         "sll             %[t6],    %[t6],    16        \n\t"
         "sll             %[t2],    %[t7],    16        \n\t"
         "precrq.ph.w     %[t6],    %[t6],    %[t2]     \n\t"
-#endif
         "sra             %[t4],    %[t8],    16        \n\t"
         "andi            %[t5],    %[t8],    0xFF      \n\t"
         "sll             %[t7],    %[t4],    5         \n\t"
@@ -260,13 +358,9 @@ static void S32_D565_Blend_Dither_mips_dsp(uint16_t* dst,
     "5:                                                    \n\t"
         "sll             %[t3],     %[t0],     7           \n\t"
         "sll             %[t4],     %[t1],     7           \n\t"
-#ifdef SK_MIPS_HAS_DSPR2
-        "append          %[t0],     %[t1],     16          \n\t"
-#else
         "sll             %[t0],     %[t0],     8           \n\t"
         "sll             %[t2],     %[t1],     8           \n\t"
         "precrq.qb.ph    %[t0],     %[t0],     %[t2]       \n\t"
-#endif
         "precrq.qb.ph    %[t1],     %[t3],     %[t4]       \n\t"
         "sll             %[t5],     %[s0],     8           \n\t"
         "sll             %[t6],     %[s1],     8           \n\t"
@@ -277,12 +371,8 @@ static void S32_D565_Blend_Dither_mips_dsp(uint16_t* dst,
         "preceu.ph.qbra  %[t6],     %[t6]                  \n\t"
         "lh              %[t2],     0(%[dst])              \n\t"
         "lh              %[s1],     2(%[dst])              \n\t"
-#ifdef SK_MIPS_HAS_DSPR2
-        "append          %[t2],     %[s1],     16          \n\t"
-#else
         "sll             %[s1],     %[s1],     16          \n\t"
         "packrl.ph       %[t2],     %[t2],     %[s1]       \n\t"
-#endif
         "shra.ph         %[s1],     %[t2],     11          \n\t"
         "and             %[s1],     %[s1],     0x1F001F    \n\t"
         "shra.ph         %[s2],     %[t2],     5           \n\t"
@@ -371,7 +461,6 @@ static void S32_D565_Blend_Dither_mips_dsp(uint16_t* dst,
 static void S32A_D565_Opaque_mips_dsp(uint16_t* __restrict__ dst,
                                       const SkPMColor* __restrict__ src,
                                       int count, U8CPU alpha, int x, int y) {
-
     __asm__ volatile (
         "pref  0,  0(%[src])     \n\t"
         "pref  1,  0(%[dst])     \n\t"
@@ -382,221 +471,203 @@ static void S32A_D565_Opaque_mips_dsp(uint16_t* __restrict__ dst,
         : "memory"
     );
 
-    register uint32_t t0, t1, t2, t3, t4, t5, t6, t7, t8;
-    register uint32_t t16;
-    register uint32_t add_x10 = 0x100010;
-    register uint32_t add_x20 = 0x200020;
-    register uint32_t sa = 0xff00ff;
+    register int t0, t1, t2, t3, t4, t5, t6, t7, t8;
+    register int add_x10 = 0x100010;
+    register int add_x20 = 0x200020;
+    register int sa = 0xff00ff;
 
-    __asm__ volatile (
-        ".set           push                            \n\t"
-        ".set           noreorder                       \n\t"
-        "blez           %[count], 1f                    \n\t"
-        " nop                                           \n\t"
-    "2:                                                 \n\t"
-        "beqz           %[count], 1f                    \n\t"
-        " nop                                           \n\t"
-        "addiu          %[t0],    %[count], -1          \n\t"
-        "beqz           %[t0],    1f                    \n\t"
-        " nop                                           \n\t"
-        "bnez           %[t16],   3f                    \n\t"
-        " nop                                           \n\t"
-        "li             %[t16],   2                     \n\t"
-        "pref           0,        64(%[src])            \n\t"
-        "pref           1,        64(%[dst])            \n\t"
-    "3:                                                 \n\t"
-        "addiu          %[t16],   %[t16],   -1          \n\t"
-        "lw             %[t0],    0(%[src])             \n\t"
-        "lw             %[t1],    4(%[src])             \n\t"
-        "precrq.ph.w    %[t2],    %[t0],    %[t1]       \n\t"
-        "preceu.ph.qbra %[t8],    %[t2]                 \n\t"
-#ifdef SK_MIPS_HAS_DSPR2
-        "append         %[t0],    %[t1],    16          \n\t"
-#else
-        "sll            %[t0],    %[t0],    16          \n\t"
-        "sll            %[t6],    %[t1],    16          \n\t"
-        "precrq.ph.w    %[t0],    %[t0],    %[t6]       \n\t"
-#endif
-        "preceu.ph.qbra %[t3],    %[t0]                 \n\t"
-        "preceu.ph.qbla %[t4],    %[t0]                 \n\t"
-        "preceu.ph.qbla %[t0],    %[t2]                 \n\t"
-        "subq.ph        %[t1],    %[sa],    %[t0]       \n\t"
-        "sra            %[t2],    %[t1],    8           \n\t"
-        "or             %[t5],    %[t2],    %[t1]       \n\t"
-        "replv.ph       %[t2],    %[t5]                 \n\t"
-        "lh             %[t0],    0(%[dst])             \n\t"
-        "lh             %[t1],    2(%[dst])             \n\t"
-        "and            %[t1],    %[t1],    0xffff      \n\t"
-#ifdef SK_MIPS_HAS_DSPR2
-        "append         %[t0],    %[t1],    16          \n\t"
-#else
-        "sll            %[t5],    %[t0],    16          \n\t"
-        "or             %[t0],    %[t5],    %[t1]       \n\t"
-#endif
-        "and            %[t1],    %[t0],    0x1f001f    \n\t"
-        "shra.ph        %[t6],    %[t0],    11          \n\t"
-        "and            %[t6],    %[t6],    0x1f001f    \n\t"
-        "and            %[t7],    %[t0],    0x7e007e0   \n\t"
-        "shra.ph        %[t5],    %[t7],    5           \n\t"
-        "muleu_s.ph.qbl %[t0],    %[t2],    %[t6]       \n\t"
-        "addq.ph        %[t7],    %[t0],    %[add_x10]  \n\t"
-        "shra.ph        %[t6],    %[t7],    5           \n\t"
-        "addq.ph        %[t6],    %[t7],    %[t6]       \n\t"
-        "shra.ph        %[t0],    %[t6],    5           \n\t"
-        "addq.ph        %[t7],    %[t0],    %[t3]       \n\t"
-        "shra.ph        %[t6],    %[t7],    3           \n\t"
-        "muleu_s.ph.qbl %[t0],    %[t2],    %[t1]       \n\t"
-        "addq.ph        %[t7],    %[t0],    %[add_x10]  \n\t"
-        "shra.ph        %[t0],    %[t7],    5           \n\t"
-        "addq.ph        %[t7],    %[t7],    %[t0]       \n\t"
-        "shra.ph        %[t0],    %[t7],    5           \n\t"
-        "addq.ph        %[t7],    %[t0],    %[t8]       \n\t"
-        "shra.ph        %[t3],    %[t7],    3           \n\t"
-        "muleu_s.ph.qbl %[t0],    %[t2],    %[t5]       \n\t"
-        "addq.ph        %[t7],    %[t0],    %[add_x20]  \n\t"
-        "shra.ph        %[t0],    %[t7],    6           \n\t"
-        "addq.ph        %[t8],    %[t7],    %[t0]       \n\t"
-        "shra.ph        %[t0],    %[t8],    6           \n\t"
-        "addq.ph        %[t7],    %[t0],    %[t4]       \n\t"
-        "shra.ph        %[t8],    %[t7],    2           \n\t"
-        "shll.ph        %[t0],    %[t8],    5           \n\t"
-        "shll.ph        %[t1],    %[t6],    11          \n\t"
-        "or             %[t2],    %[t0],    %[t1]       \n\t"
-        "or             %[t3],    %[t2],    %[t3]       \n\t"
-        "sra            %[t4],    %[t3],    16          \n\t"
-        "sh             %[t4],    0(%[dst])             \n\t"
-        "sh             %[t3],    2(%[dst])             \n\t"
-        "addiu          %[count], %[count], -2          \n\t"
-        "addiu          %[src],   %[src],   8           \n\t"
-        "b              2b                              \n\t"
-        " addiu         %[dst],   %[dst],   4           \n\t"
-    "1:                                                 \n\t"
-        ".set           pop                             \n\t"
-        : [dst]"+r"(dst), [src]"+r"(src), [count]"+r"(count),
-          [t16]"=&r"(t16), [t0]"=&r"(t0), [t1]"=&r"(t1), [t2]"=&r"(t2),
-          [t3]"=&r"(t3), [t4]"=&r"(t4), [t5]"=&r"(t5), [t6]"=&r"(t6),
-          [t7]"=&r"(t7), [t8]"=&r"(t8)
-        : [add_x10]"r"(add_x10), [add_x20]"r"(add_x20), [sa]"r"(sa)
-        : "memory", "hi", "lo"
-    );
+    SkASSERT(255 == alpha);
 
-    if (count == 1) {
-        SkPMColor c = *src++;
-        SkPMColorAssert(c);
-        if (c) {
-            *dst = SkSrcOver32To16(c, *dst);
+    for (int i = (count >> 1); i > 0; i--)
+    {
+        __asm__ volatile (
+            ".set           push                            \n\t"
+            ".set           noreorder                       \n\t"
+            "lw             %[t1],    0(%[src])             \n\t"
+            "lw             %[t0],    4(%[src])             \n\t"
+            "precrq.ph.w    %[t2],    %[t1],    %[t0]       \n\t"
+            "preceu.ph.qbra %[t8],    %[t2]                 \n\t"
+            "ins            %[t0],    %[t1],    16,    16   \n\t"
+            "preceu.ph.qbra %[t3],    %[t0]                 \n\t"
+            "preceu.ph.qbla %[t4],    %[t0]                 \n\t"
+            "preceu.ph.qbla %[t0],    %[t2]                 \n\t"
+            "subq.ph        %[t1],    %[sa],    %[t0]       \n\t"
+            "sra            %[t2],    %[t1],    8           \n\t"
+            "or             %[t5],    %[t2],    %[t1]       \n\t"
+            "replv.ph       %[t2],    %[t5]                 \n\t"
+            "lh             %[t1],    0(%[dst])             \n\t"
+            "lh             %[t0],    2(%[dst])             \n\t"
+            "ins            %[t0],    %[t1],    16,    16   \n\t"
+            "and            %[t1],    %[t0],    0x1f001f    \n\t"
+            "shra.ph        %[t6],    %[t0],    11          \n\t"
+            "and            %[t6],    %[t6],    0x1f001f    \n\t"
+            "and            %[t7],    %[t0],    0x7e007e0   \n\t"
+            "shra.ph        %[t5],    %[t7],    5           \n\t"
+            "muleu_s.ph.qbl %[t0],    %[t2],    %[t6]       \n\t"
+            "addq.ph        %[t7],    %[t0],    %[add_x10]  \n\t"
+            "shra.ph        %[t6],    %[t7],    5           \n\t"
+            "addq.ph        %[t6],    %[t7],    %[t6]       \n\t"
+            "shra.ph        %[t0],    %[t6],    5           \n\t"
+            "addq.ph        %[t7],    %[t0],    %[t8]       \n\t"
+            "shra.ph        %[t6],    %[t7],    3           \n\t"
+            "muleu_s.ph.qbl %[t0],    %[t2],    %[t1]       \n\t"
+            "addq.ph        %[t7],    %[t0],    %[add_x10]  \n\t"
+            "shra.ph        %[t0],    %[t7],    5           \n\t"
+            "addq.ph        %[t7],    %[t7],    %[t0]       \n\t"
+            "shra.ph        %[t0],    %[t7],    5           \n\t"
+            "addq.ph        %[t7],    %[t0],    %[t3]       \n\t"
+            "shra.ph        %[t3],    %[t7],    3           \n\t"
+            "muleu_s.ph.qbl %[t0],    %[t2],    %[t5]       \n\t"
+            "addq.ph        %[t7],    %[t0],    %[add_x20]  \n\t"
+            "shra.ph        %[t0],    %[t7],    6           \n\t"
+            "addq.ph        %[t8],    %[t7],    %[t0]       \n\t"
+            "shra.ph        %[t0],    %[t8],    6           \n\t"
+            "addq.ph        %[t7],    %[t0],    %[t4]       \n\t"
+            "shra.ph        %[t8],    %[t7],    2           \n\t"
+            "shll.ph        %[t0],    %[t8],    5           \n\t"
+            "shll.ph        %[t1],    %[t6],    11          \n\t"
+            "or             %[t2],    %[t0],    %[t1]       \n\t"
+            "or             %[t3],    %[t2],    %[t3]       \n\t"
+            "sra            %[t4],    %[t3],    16          \n\t"
+            "sh             %[t4],    0(%[dst])             \n\t"
+            "sh             %[t3],    2(%[dst])             \n\t"
+            "addiu          %[src],   %[src],   8           \n\t"
+            "addiu          %[dst],   %[dst],   4           \n\t"
+            ".set           pop                             \n\t"
+            : [dst]"+r"(dst), [src]"+r"(src), [count]"+r"(count),
+              [t0]"=&r"(t0), [t1]"=&r"(t1), [t2]"=&r"(t2),
+              [t3]"=&r"(t3), [t4]"=&r"(t4), [t5]"=&r"(t5),
+              [t6]"=&r"(t6), [t7]"=&r"(t7), [t8]"=&r"(t8)
+            : [add_x10]"r"(add_x10), [add_x20]"r"(add_x20),
+              [sa]"r"(sa)
+            : "memory", "hi", "lo"
+        );
+    }
+    if (count & 1)
+    {
+       SkPMColor c = *src++;
+       SkPMColorAssert(c);
+       if (c) {
+           // *dst = SkSrcOver32To16(c, *dst);
+           unsigned sr = SkGetPackedR32(c);
+           unsigned sg = SkGetPackedG32(c);
+           unsigned sb = SkGetPackedB32(c);
+           unsigned dr = SkGetPackedR16(*dst);
+           unsigned dg = SkGetPackedG16(*dst);
+           unsigned db = SkGetPackedB16(*dst);
+           unsigned isa = 255 - SkGetPackedA32(c);
+           dr = (sr + SkMul16ShiftRound(dr, isa, SK_R16_BITS)) >> (8 - SK_R16_BITS);
+           dg = (sg + SkMul16ShiftRound(dg, isa, SK_G16_BITS)) >> (8 - SK_G16_BITS);
+           db = (sb + SkMul16ShiftRound(db, isa, SK_B16_BITS)) >> (8 - SK_B16_BITS);
+           *dst = SkPackRGB16(dr, dg, db);
         }
         dst += 1;
-    }
+     }
 }
 
 static void S32A_D565_Blend_mips_dsp(uint16_t* SK_RESTRICT dst,
                                      const SkPMColor* SK_RESTRICT src, int count,
                                      U8CPU alpha, int /*x*/, int /*y*/) {
-    register uint32_t t0, t1, t2, t3, t4, t5, t6, t7, t8, t9;
-    register uint32_t  s0, s1, s2, s3;
-    register unsigned dst_scale = 0;
+    SkASSERT(255 > alpha);
 
-    __asm__ volatile (
-        ".set            push                                       \n\t"
-        ".set            noreorder                                  \n\t"
-        "replv.qb        %[t0],        %[alpha]                     \n\t"
-        "repl.ph         %[t6],        0x80                         \n\t"
-        "repl.ph         %[t7],        0xFF                         \n\t"
-    "1:                                                             \n\t"
-        "addiu           %[t8],        %[count],     -1             \n\t"
-        "blez            %[t8],        2f                           \n\t"
-        " nop                                                       \n\t"
-        "lw              %[t8],        0(%[src])                    \n\t"
-        "lw              %[t9],        4(%[src])                    \n\t"
-        "lh              %[t4],        0(%[dst])                    \n\t"
-        "lh              %[t5],        2(%[dst])                    \n\t"
-        "sll             %[t5],        %[t5],        16             \n\t"
-        "sll             %[t2],        %[t8],        8              \n\t"
-        "sll             %[t3],        %[t9],        8              \n\t"
-        "precrq.qb.ph    %[t1],        %[t2],        %[t3]          \n\t"
-        "precrq.qb.ph    %[t3],        %[t8],        %[t9]          \n\t"
-        "preceu.ph.qbla  %[t8],        %[t3]                        \n\t"
-        "muleu_s.ph.qbr  %[s3],        %[t0],        %[t8]          \n\t"
-        "preceu.ph.qbla  %[t2],        %[t1]                        \n\t"
-        "preceu.ph.qbra  %[t1],        %[t1]                        \n\t"
-        "preceu.ph.qbra  %[t3],        %[t3]                        \n\t"
-        "packrl.ph       %[t9],        %[t4],        %[t5]          \n\t"
-        "shra.ph         %[s0],        %[t9],        11             \n\t"
-        "and             %[s0],        %[s0],        0x1F001F       \n\t"
-        "shra.ph         %[s1],        %[t9],        5              \n\t"
-        "and             %[s1],        %[s1],        0x3F003F       \n\t"
-        "and             %[s2],        %[t9],        0x1F001F       \n\t"
-        "addq.ph         %[s3],        %[s3],        %[t6]          \n\t"
-        "shra.ph         %[t5],        %[s3],        8              \n\t"
-        "and             %[t5],        %[t5],        0xFF00FF       \n\t"
-        "addq.ph         %[dst_scale], %[s3],        %[t5]          \n\t"
-        "shra.ph         %[dst_scale], %[dst_scale], 8              \n\t"
-        "subq_s.ph       %[dst_scale], %[t7],        %[dst_scale]   \n\t"
-        "sll             %[dst_scale], %[dst_scale], 8              \n\t"
-        "precrq.qb.ph    %[dst_scale], %[dst_scale], %[dst_scale]   \n\t"
-        "shrl.qb         %[t1],        %[t1],        3              \n\t"
-        "shrl.qb         %[t2],        %[t2],        3              \n\t"
-        "shrl.qb         %[t3],        %[t3],        2              \n\t"
-        "muleu_s.ph.qbl  %[t1],        %[t0],        %[t1]          \n\t"
-        "muleu_s.ph.qbl  %[t2],        %[t0],        %[t2]          \n\t"
-        "muleu_s.ph.qbl  %[t3],        %[t0],        %[t3]          \n\t"
-        "muleu_s.ph.qbl  %[t8],        %[dst_scale], %[s0]          \n\t"
-        "muleu_s.ph.qbl  %[t9],        %[dst_scale], %[s2]          \n\t"
-        "muleu_s.ph.qbl  %[t4],        %[dst_scale], %[s1]          \n\t"
-        "addq.ph         %[t1],        %[t1],        %[t8]          \n\t"
-        "addq.ph         %[t2],        %[t2],        %[t9]          \n\t"
-        "addq.ph         %[t3],        %[t3],        %[t4]          \n\t"
-        "addq.ph         %[t8],        %[t1],        %[t6]          \n\t"
-        "addq.ph         %[t9],        %[t2],        %[t6]          \n\t"
-        "addq.ph         %[t4],        %[t3],        %[t6]          \n\t"
-        "shra.ph         %[t1],        %[t8],        8              \n\t"
-        "addq.ph         %[t1],        %[t1],        %[t8]          \n\t"
-        "preceu.ph.qbla  %[t1],        %[t1]                        \n\t"
-        "shra.ph         %[t2],        %[t9],        8              \n\t"
-        "addq.ph         %[t2],        %[t2],        %[t9]          \n\t"
-        "preceu.ph.qbla  %[t2],        %[t2]                        \n\t"
-        "shra.ph         %[t3],        %[t4],        8              \n\t"
-        "addq.ph         %[t3],        %[t3],        %[t4]          \n\t"
-        "preceu.ph.qbla  %[t3],        %[t3]                        \n\t"
-        "shll.ph         %[t8],        %[t1],        11             \n\t"
-        "shll.ph         %[t9],        %[t3],        5              \n\t"
-        "or              %[t8],        %[t8],        %[t9]          \n\t"
-        "or              %[s0],        %[t8],        %[t2]          \n\t"
-        "srl             %[t8],        %[s0],        16             \n\t"
-        "and             %[t9],        %[s0],        0xFFFF         \n\t"
-        "sh              %[t8],        0(%[dst])                    \n\t"
-        "sh              %[t9],        2(%[dst])                    \n\t"
-        "addiu           %[src],       %[src],       8              \n\t"
-        "addiu           %[count],     %[count],     -2             \n\t"
-        "b               1b                                         \n\t"
-        " addiu          %[dst],       %[dst],       4              \n\t"
-    "2:                                                             \n\t"
-        ".set            pop                                        \n\t"
-        : [src]"+r"(src), [dst]"+r"(dst), [count]"+r"(count),
-          [dst_scale]"+r"(dst_scale), [s0]"=&r"(s0), [s1]"=&r"(s1),
-          [s2]"=&r"(s2), [s3]"=&r"(s3), [t0]"=&r"(t0), [t1]"=&r"(t1),
-          [t2]"=&r"(t2), [t3]"=&r"(t3), [t4]"=&r"(t4), [t5]"=&r"(t5),
-          [t6]"=&r"(t6), [t7]"=&r"(t7), [t8]"=&r"(t8), [t9]"=&r"(t9)
-        : [alpha]"r"(alpha)
-        : "memory", "hi", "lo"
-    );
+    if (count > 0) {
+        for (; count >=2; count -=2)
+        {
+            register uint32_t t0, t1, t2, t3, t4, t5, t6, t7, t8, t9;
+            register uint32_t  s0, s1, s2, s3;
+            register unsigned dst_scale = 0;
 
-    if (count == 1) {
-        SkPMColor sc = *src++;
-        SkPMColorAssert(sc);
-        if (sc) {
-            uint16_t dc = *dst;
-            unsigned dst_scale = 255 - SkMulDiv255Round(SkGetPackedA32(sc), alpha);
-            unsigned dr = SkMulS16(SkPacked32ToR16(sc), alpha) +
-                          SkMulS16(SkGetPackedR16(dc), dst_scale);
-            unsigned dg = SkMulS16(SkPacked32ToG16(sc), alpha) +
-                          SkMulS16(SkGetPackedG16(dc), dst_scale);
-            unsigned db = SkMulS16(SkPacked32ToB16(sc), alpha) +
-                          SkMulS16(SkGetPackedB16(dc), dst_scale);
-            *dst = SkPackRGB16(SkDiv255Round(dr), SkDiv255Round(dg), SkDiv255Round(db));
+            __asm__ volatile (
+                ".set            push                                       \n\t"
+                ".set            noreorder                                  \n\t"
+                "replv.qb        %[t0],        %[alpha]                     \n\t"
+                "repl.ph         %[t6],        0x80                         \n\t"
+                "repl.ph         %[t7],        0xFF                         \n\t"
+                "lw              %[t8],        0(%[src])                    \n\t"
+                "lw              %[t9],        4(%[src])                    \n\t"
+                "lh              %[t4],        0(%[dst])                    \n\t"
+                "lh              %[t5],        2(%[dst])                    \n\t"
+                "sll             %[t5],        %[t5],        16             \n\t"
+                "sll             %[t2],        %[t8],        8              \n\t"
+                "sll             %[t3],        %[t9],        8              \n\t"
+                "precrq.qb.ph    %[t1],        %[t2],        %[t3]          \n\t"
+                "precrq.qb.ph    %[t3],        %[t8],        %[t9]          \n\t"
+                "preceu.ph.qbla  %[t8],        %[t3]                        \n\t"
+                "muleu_s.ph.qbr  %[s3],        %[t0],        %[t8]          \n\t"
+                "preceu.ph.qbla  %[t2],        %[t1]                        \n\t"
+                "preceu.ph.qbra  %[t1],        %[t1]                        \n\t"
+                "preceu.ph.qbra  %[t3],        %[t3]                        \n\t"
+                "packrl.ph       %[t9],        %[t4],        %[t5]          \n\t"
+                "shra.ph         %[s0],        %[t9],        11             \n\t"
+                "and             %[s0],        %[s0],        0x1F001F       \n\t"
+                "shra.ph         %[s1],        %[t9],        5              \n\t"
+                "and             %[s1],        %[s1],        0x3F003F       \n\t"
+                "and             %[s2],        %[t9],        0x1F001F       \n\t"
+                "addq.ph         %[s3],        %[s3],        %[t6]          \n\t"
+                "shra.ph         %[t5],        %[s3],        8              \n\t"
+                "and             %[t5],        %[t5],        0xFF00FF       \n\t"
+                "addq.ph         %[dst_scale], %[s3],        %[t5]          \n\t"
+                "shra.ph         %[dst_scale], %[dst_scale], 8              \n\t"
+                "subq_s.ph       %[dst_scale], %[t7],        %[dst_scale]   \n\t"
+                "sll             %[dst_scale], %[dst_scale], 8              \n\t"
+                "precrq.qb.ph    %[dst_scale], %[dst_scale], %[dst_scale]   \n\t"
+                "shrl.qb         %[t1],        %[t1],        3              \n\t"
+                "shrl.qb         %[t2],        %[t2],        3              \n\t"
+                "shrl.qb         %[t3],        %[t3],        2              \n\t"
+                "muleu_s.ph.qbl  %[t1],        %[t0],        %[t1]          \n\t"
+                "muleu_s.ph.qbl  %[t2],        %[t0],        %[t2]          \n\t"
+                "muleu_s.ph.qbl  %[t3],        %[t0],        %[t3]          \n\t"
+                "muleu_s.ph.qbl  %[t8],        %[dst_scale], %[s0]          \n\t"
+                "muleu_s.ph.qbl  %[t9],        %[dst_scale], %[s2]          \n\t"
+                "muleu_s.ph.qbl  %[t4],        %[dst_scale], %[s1]          \n\t"
+                "addq.ph         %[s0],        %[t2],        %[t8]          \n\t"
+                "addq.ph         %[t5],        %[t1],        %[t9]          \n\t"
+                "addq.ph         %[s1],        %[t3],        %[t4]          \n\t"
+                "addq.ph         %[t8],        %[s0],        %[t6]          \n\t"
+                "addq.ph         %[t9],        %[t5],        %[t6]          \n\t"
+                "addq.ph         %[t4],        %[s1],        %[t6]          \n\t"
+                "shra.ph         %[t1],        %[t8],        8              \n\t"
+                "addq.ph         %[t1],        %[t1],        %[t8]          \n\t"
+                "preceu.ph.qbla  %[t1],        %[t1]                        \n\t"
+                "shra.ph         %[t2],        %[t9],        8              \n\t"
+                "addq.ph         %[t2],        %[t2],        %[t9]          \n\t"
+                "preceu.ph.qbla  %[t2],        %[t2]                        \n\t"
+                "shra.ph         %[t3],        %[t4],        8              \n\t"
+                "addq.ph         %[t3],        %[t3],        %[t4]          \n\t"
+                "preceu.ph.qbla  %[t3],        %[t3]                        \n\t"
+                "shll.ph         %[t8],        %[t1],        11             \n\t"
+                "shll.ph         %[t9],        %[t3],        5              \n\t"
+                "or              %[t8],        %[t8],        %[t9]          \n\t"
+                "or              %[s0],        %[t8],        %[t2]          \n\t"
+                "srl             %[t8],        %[s0],        16             \n\t"
+                "and             %[t9],        %[s0],        0xFFFF         \n\t"
+                "sh              %[t8],        0(%[dst])                    \n\t"
+                "sh              %[t9],        2(%[dst])                    \n\t"
+                "addiu           %[src],       %[src],       8              \n\t"
+                "addiu           %[dst],       %[dst],       4              \n\t"
+                ".set            pop                                        \n\t"
+                : [src]"+r"(src), [dst]"+r"(dst), [count]"+r"(count),
+                  [dst_scale]"+r"(dst_scale), [s0]"=&r"(s0), [s1]"=&r"(s1),
+                  [s2]"=&r"(s2), [s3]"=&r"(s3), [t0]"=&r"(t0), [t1]"=&r"(t1),
+                  [t2]"=&r"(t2), [t3]"=&r"(t3), [t4]"=&r"(t4), [t5]"=&r"(t5),
+                  [t6]"=&r"(t6), [t7]"=&r"(t7), [t8]"=&r"(t8), [t9]"=&r"(t9)
+                : [alpha]"r"(alpha)
+                : "memory", "hi", "lo"
+            );
         }
-        dst += 1;
+        if (count == 1) {
+            SkPMColor sc = *src++;
+            SkPMColorAssert(sc);
+            if (sc) {
+                uint16_t dc = *dst;
+                unsigned dst_scale = 255 - SkMulDiv255Round(SkGetPackedA32(sc), alpha);
+                unsigned dr = SkMulS16(SkPacked32ToR16(sc), alpha) + SkMulS16(SkGetPackedR16(dc), dst_scale);
+                unsigned dg = SkMulS16(SkPacked32ToG16(sc), alpha) + SkMulS16(SkGetPackedG16(dc), dst_scale);
+                unsigned db = SkMulS16(SkPacked32ToB16(sc), alpha) + SkMulS16(SkGetPackedB16(dc), dst_scale);
+                *dst = SkPackRGB16(SkDiv255Round(dr), SkDiv255Round(dg), SkDiv255Round(db));
+            }
+            dst += 1;
+        }
     }
 }
 
@@ -641,6 +712,131 @@ static void S32_Blend_BlitRow32_mips_dsp(SkPMColor* SK_RESTRICT dst,
         : [alpha]"r"(alpha)
         : "memory", "hi", "lo"
     );
+}
+
+#define STR1(x) #x
+#define STR(x) STR1(x)
+static void S32_D565_Opaque_mips_dsp(uint16_t* SK_RESTRICT dst,
+                                     const SkPMColor* SK_RESTRICT src, int count,
+                                     U8CPU alpha, int /*x*/, int /*y*/) {
+    SkASSERT(255 == alpha);
+    if (count > 0) {
+        int temp0, temp1, temp2, temp3, temp4;
+        SkPMColor* const loopEnd = (SkPMColor*)src + count;
+
+        __asm__ volatile (
+            ".set    push                                                                     \n\t"
+            ".set    noreorder                                                                \n\t"
+            "andi    %[temp4],  %[count],    1                                                \n\t"
+            "beq     %[temp4],  $zero,       1f                                               \n\t"
+            " srl    %[count],  %[count],    1                                                \n\t"
+            "lw      %[temp0],  0(%[src])                                                     \n\t"
+            "addiu   %[src],    %[src],      4                                                \n\t"
+            "ext     %[temp1],  %[temp0],    "STR((SK_B32_SHIFT + (8 - SK_B16_BITS)))",  5    \n\t"
+            "ext     %[temp2],  %[temp0],    "STR((SK_G32_SHIFT + (8 - SK_G16_BITS)))",  6    \n\t"
+            "ext     %[temp3],  %[temp0],    "STR((SK_R32_SHIFT + (8 - SK_R16_BITS)))",  5    \n\t"
+            "ins     %[temp4],  %[temp1],    "STR(SK_B16_SHIFT)",                        5    \n\t"
+            "ins     %[temp4],  %[temp2],    "STR(SK_G16_SHIFT)",                        6    \n\t"
+            "ins     %[temp4],  %[temp3],    "STR(SK_R16_SHIFT)",                        5    \n\t"
+            "sh      %[temp4],  0(%[dst])                                                     \n\t"
+            "beq     %[src],    %[loopEnd],  2f                                               \n\t"
+            " addiu  %[dst],    %[dst],      2                                                \n\t"
+        "1:                                                                                   \n\t"
+            "lw      %[temp0],  0(%[src])                                                     \n\t"
+            "ext     %[temp1],  %[temp0],    "STR((SK_B32_SHIFT + (8 - SK_B16_BITS)))",  5    \n\t"
+            "ext     %[temp2],  %[temp0],    "STR((SK_G32_SHIFT + (8 - SK_G16_BITS)))",  6    \n\t"
+            "ext     %[temp3],  %[temp0],    "STR((SK_R32_SHIFT + (8 - SK_R16_BITS)))",  5    \n\t"
+            "lw      %[temp0],  4(%[src])                                                     \n\t"
+            "ins     %[temp4],  %[temp1],    "STR(SK_B16_SHIFT)",                        5    \n\t"
+            "ins     %[temp4],  %[temp2],    "STR(SK_G16_SHIFT)",                        6    \n\t"
+            "ins     %[temp4],  %[temp3],    "STR(SK_R16_SHIFT)",                        5    \n\t"
+            "ext     %[temp1],  %[temp0],    "STR((SK_B32_SHIFT + (8 - SK_B16_BITS)))",  5    \n\t"
+            "ext     %[temp2],  %[temp0],    "STR((SK_G32_SHIFT + (8 - SK_G16_BITS)))",  6    \n\t"
+            "ext     %[temp3],  %[temp0],    "STR((SK_R32_SHIFT + (8 - SK_R16_BITS)))",  5    \n\t"
+            "ins     %[temp4],  %[temp1],    "STR(SK_B16_SHIFT + 16)",                   5    \n\t"
+            "ins     %[temp4],  %[temp2],    "STR(SK_G16_SHIFT + 16)",                   6    \n\t"
+            "ins     %[temp4],  %[temp3],    "STR(SK_R16_SHIFT + 16)",                   5    \n\t"
+            "addiu   %[src],    %[src],      8                                                \n\t"
+            "usw     %[temp4],  0(%[dst])                                                     \n\t"
+            "bne     %[src],    %[loopEnd],  1b                                               \n\t"
+            " addiu  %[dst],    %[dst],      4                                                \n\t"
+        "2:                                                                                   \n\t"
+            ".set   pop                                                                       \n\t"
+            : [src]"+r"(src), [dst]"+r"(dst), [count]"+r"(count), [temp0]"=&r"(temp0),
+              [temp1]"=&r"(temp1), [temp2]"=&r"(temp2), [temp3]"=&r"(temp3), [temp4]"=&r"(temp4)
+            : [loopEnd]"r"(loopEnd)
+            : "memory"
+        );
+    }
+}
+#undef STR
+#undef STR1
+
+static void S32A_Opaque_BlitRow32_mips_dsp(SkPMColor* SK_RESTRICT dst,
+                                           const SkPMColor* SK_RESTRICT src,
+                                           int count, U8CPU alpha) {
+
+    SkASSERT(255 == alpha);
+
+    if (count > 0) {
+        register int t0 = 256;
+        register int t1, t2, t3, t4, t5, t6, t7, t8;
+
+        __asm__ volatile (
+            ".set            push                       \n\t"
+            ".set            noreorder                  \n\t"
+            "sll             %[t1],  %[count], 2        \n\t"
+            "andi            %[t2],  %[count], 1        \n\t"
+            "beqz            %[t2],  1f                 \n\t"
+            " addu           %[t8],  %[src],   %[t1]    \n\t"
+        "0:                                             \n\t"
+            "lw              %[t6],  0(%[src])          \n\t"
+            "lw              %[t5],  0(%[dst])          \n\t"
+            "addiu           %[src], 4                  \n\t"
+            "ext             %[t1],  %[t6],    24,    8 \n\t"
+            "subu            %[t1],  %[t0],    %[t1]    \n\t"
+            "replv.ph        %[t1],  %[t1]              \n\t"
+            "muleu_s.ph.qbl  %[t2],  %[t5],    %[t1]    \n\t"
+            "muleu_s.ph.qbr  %[t3],  %[t5],    %[t1]    \n\t"
+            "precrq.qb.ph    %[t2],  %[t2],    %[t3]    \n\t"
+            "addu            %[t2],  %[t2],    %[t6]    \n\t"
+            "sw              %[t2],  0(%[dst])          \n\t"
+            "beq             %[src], %[t8],    2f       \n\t"
+            " addiu          %[dst], 4                  \n\t"
+        "1:                                             \n\t"
+            "lw              %[t6],  0(%[src])          \n\t"
+            "lw              %[t4],  4(%[src])          \n\t"
+            "lw              %[t5],  0(%[dst])          \n\t"
+            "lw              %[t3],  4(%[dst])          \n\t"
+            "ext             %[t1],  %[t6],    24,   8  \n\t"
+            "ext             %[t2],  %[t4],    24,   8  \n\t"
+            "subu            %[t1],  %[t0],    %[t1]    \n\t"
+            "subu            %[t2],  %[t0],    %[t2]    \n\t"
+            "replv.ph        %[t1],  %[t1]              \n\t"
+            "replv.ph        %[t2],  %[t2]              \n\t"
+            "muleu_s.ph.qbl  %[t7],  %[t5],    %[t1]    \n\t"
+            "muleu_s.ph.qbr  %[t5],  %[t5],    %[t1]    \n\t"
+            "muleu_s.ph.qbl  %[t1],  %[t3],    %[t2]    \n\t"
+            "muleu_s.ph.qbr  %[t3],  %[t3],    %[t2]    \n\t"
+            "addiu           %[src], 8                  \n\t"
+            "precrq.qb.ph    %[t2],  %[t7],    %[t5]    \n\t"
+            "precrq.qb.ph    %[t1],  %[t1],    %[t3]    \n\t"
+            "addu            %[t2],  %[t2],    %[t6]    \n\t"
+            "addu            %[t1],  %[t1],    %[t4]    \n\t"
+            "sw              %[t2],  0(%[dst])          \n\t"
+            "sw              %[t1],  4(%[dst])          \n\t"
+            "bne             %[src], %[t8],    1b       \n\t"
+            " addiu          %[dst], 8                  \n\t"
+        "2:                                             \n\t"
+            ".set            pop                        \n\t"
+            : [src]"+r"(src), [dst]"+r"(dst), [t1]"=&r"(t1),
+              [t2]"=&r"(t2), [t3]"=&r"(t3), [t4]"=&r"(t4),
+              [t5]"=&r"(t5), [t6]"=&r"(t6), [t7]"=&r"(t7),
+              [t8]"=&r"(t8)
+            : [count]"r"(count), [t0]"r"(t0)
+            : "memory", "hi", "lo"
+        );
+    }
 }
 
 void blitmask_d565_opaque_mips(int width, int height, uint16_t* device,
@@ -758,7 +954,7 @@ void blitmask_d565_opaque_mips(int width, int height, uint16_t* device,
 
 const SkBlitRow::Proc platform_565_procs_mips_dsp[] = {
     // no dither
-    NULL,
+    S32_D565_Opaque_mips_dsp,
     S32_D565_Blend_mips_dsp,
     S32A_D565_Opaque_mips_dsp,
     S32A_D565_Blend_mips_dsp,
@@ -766,14 +962,14 @@ const SkBlitRow::Proc platform_565_procs_mips_dsp[] = {
     // dither
     S32_D565_Opaque_Dither_mips_dsp,
     S32_D565_Blend_Dither_mips_dsp,
-    NULL,
+    S32A_D565_Opaque_Dither_mips_dsp,
     NULL,
 };
 
 static const SkBlitRow::Proc32 platform_32_procs_mips_dsp[] = {
     NULL,   // S32_Opaque,
-    S32_Blend_BlitRow32_mips_dsp,   // S32_Blend,
-    NULL,   // S32A_Opaque,
+    S32_Blend_BlitRow32_mips_dsp,
+    S32A_Opaque_BlitRow32_mips_dsp,
     NULL,   // S32A_Blend,
 };
 

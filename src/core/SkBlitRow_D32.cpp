@@ -21,7 +21,6 @@ static void S32_Opaque_BlitRow32(SkPMColor* SK_RESTRICT dst,
     sk_memcpy32(dst, src, count);
 }
 
-#ifndef SK_CPU_MIPS
 static void S32_Blend_BlitRow32(SkPMColor* SK_RESTRICT dst,
                                 const SkPMColor* SK_RESTRICT src,
                                 int count, U8CPU alpha) {
@@ -82,141 +81,6 @@ static void S32A_Opaque_BlitRow32(SkPMColor* SK_RESTRICT dst,
 #endif
     }
 }
-#else
-static void S32_Blend_BlitRow32(SkPMColor* SK_RESTRICT dst,
-                                const SkPMColor* SK_RESTRICT src,
-                                int count, U8CPU alpha) {
-    if (count > 0) {
-        register int t0, t1, t2, t3, t4, t5, t6, t7, t8;
-
-        __asm__ volatile (
-            ".set            push                       \n\t"
-            ".set            noreorder                  \n\t"
-            "li              %[t0],  0x01000100         \n\t"
-            "sll             %[t1],  %[count], 2        \n\t"
-            "andi            %[t2],  %[count], 1        \n\t"
-            "addiu           %[t7],  %[alpha], 1        \n\t"
-            "replv.ph        %[t7],  %[t7]              \n\t"
-            "subu.ph         %[t6],  %[t0],    %[t7]    \n\t"
-            "beqz            %[t2],  1f                 \n\t"
-            " addu           %[t8],  %[src],   %[t1]    \n\t"
-        "0:                                             \n\t"
-            "lw              %[t0],  0(%[src])          \n\t"
-            "lw              %[t1],  0(%[dst])          \n\t"
-            "addiu           %[src], 4                  \n\t"
-            "muleu_s.ph.qbl  %[t2],  %[t0],    %[t7]    \n\t"
-            "muleu_s.ph.qbr  %[t0],  %[t0],    %[t7]    \n\t"
-            "muleu_s.ph.qbl  %[t4],  %[t1],    %[t6]    \n\t"
-            "muleu_s.ph.qbr  %[t5],  %[t1],    %[t6]    \n\t"
-            "precrq.qb.ph    %[t2],  %[t2],    %[t0]    \n\t"
-            "precrq.qb.ph    %[t0],  %[t4],    %[t5]    \n\t"
-            "addu            %[t1],  %[t2],    %[t0]    \n\t"
-            "sw              %[t1],  0(%[dst])          \n\t"
-            "beq             %[src], %[t8],    2f       \n\t"
-            " addiu          %[dst], 4                  \n\t"
-        "1:                                             \n\t"
-            "lw              %[t0],  0(%[src])          \n\t"
-            "lw              %[t1],  0(%[dst])          \n\t"
-            "lw              %[t2],  4(%[src])          \n\t"
-            "lw              %[t3],  4(%[dst])          \n\t"
-            "addiu           %[src], 8                  \n\t"
-            "muleu_s.ph.qbl  %[t4],  %[t0],    %[t7]    \n\t"
-            "muleu_s.ph.qbr  %[t5],  %[t0],    %[t7]    \n\t"
-            "muleu_s.ph.qbl  %[t0],  %[t1],    %[t6]    \n\t"
-            "muleu_s.ph.qbr  %[t1],  %[t1],    %[t6]    \n\t"
-            "precrq.qb.ph    %[t4],  %[t4],    %[t5]    \n\t"
-            "precrq.qb.ph    %[t0],  %[t0],    %[t1]    \n\t"
-            "addu            %[t1],  %[t4],    %[t0]    \n\t"
-            "muleu_s.ph.qbl  %[t4],  %[t2],    %[t7]    \n\t"
-            "muleu_s.ph.qbr  %[t5],  %[t2],    %[t7]    \n\t"
-            "muleu_s.ph.qbl  %[t2],  %[t3],    %[t6]    \n\t"
-            "muleu_s.ph.qbr  %[t3],  %[t3],    %[t6]    \n\t"
-            "precrq.qb.ph    %[t4],  %[t4],    %[t5]    \n\t"
-            "precrq.qb.ph    %[t0],  %[t2],    %[t3]    \n\t"
-            "addu            %[t2],  %[t4],    %[t0]    \n\t"
-            "sw              %[t1],  0(%[dst])          \n\t"
-            "sw              %[t2],  4(%[dst])          \n\t"
-            "bne             %[src], %[t8],    1b       \n\t"
-            " addiu          %[dst], 8                  \n\t"
-        "2:                                             \n\t"
-            ".set            pop                        \n\t"
-            : [src]"+r"(src), [dst]"+r"(dst), [t0]"=&r"(t0),
-              [t1]"=&r"(t1), [t2]"=&r"(t2), [t3]"=&r"(t3),
-              [t4]"=&r"(t4), [t5]"=&r"(t5), [t6]"=&r"(t6),
-              [t7]"=&r"(t7), [t8]"=&r"(t8)
-            : [count]"r"(count), [alpha]"r"(alpha)
-            : "hi", "lo", "memory"
-        );
-    }
-}
-
-static void S32A_Opaque_BlitRow32(SkPMColor* SK_RESTRICT dst,
-                                  const SkPMColor* SK_RESTRICT src,
-                                  int count, U8CPU alpha) {
-
-    SkASSERT(255 == alpha);
-
-    if (count > 0) {
-        register int t0 = 256;
-        register int t1, t2, t3, t4, t5, t6, t7, t8;
-
-        __asm__ volatile (
-            ".set            push                       \n\t"
-            ".set            noreorder                  \n\t"
-            "sll             %[t1],  %[count], 2        \n\t"
-            "andi            %[t2],  %[count], 1        \n\t"
-            "beqz            %[t2],  1f                 \n\t"
-            " addu           %[t8],  %[src],   %[t1]    \n\t"
-        "0:                                             \n\t"
-            "lw              %[t6],  0(%[src])          \n\t"
-            "lw              %[t5],  0(%[dst])          \n\t"
-            "addiu           %[src], 4                  \n\t"
-            "ext             %[t1],  %[t6],    24,    8 \n\t"
-            "subu            %[t1],  %[t0],    %[t1]    \n\t"
-            "replv.ph        %[t1],  %[t1]              \n\t"
-            "muleu_s.ph.qbl  %[t2],  %[t5],    %[t1]    \n\t"
-            "muleu_s.ph.qbr  %[t3],  %[t5],    %[t1]    \n\t"
-            "precrq.qb.ph    %[t2],  %[t2],    %[t3]    \n\t"
-            "addu            %[t2],  %[t2],    %[t6]    \n\t"
-            "sw              %[t2],  0(%[dst])          \n\t"
-            "beq             %[src], %[t8],    2f       \n\t"
-            " addiu          %[dst], 4                  \n\t"
-        "1:                                             \n\t"
-            "lw              %[t6],  0(%[src])          \n\t"
-            "lw              %[t4],  4(%[src])          \n\t"
-            "lw              %[t5],  0(%[dst])          \n\t"
-            "lw              %[t3],  4(%[dst])          \n\t"
-            "ext             %[t1],  %[t6],    24,   8  \n\t"
-            "ext             %[t2],  %[t4],    24,   8  \n\t"
-            "subu            %[t1],  %[t0],    %[t1]    \n\t"
-            "subu            %[t2],  %[t0],    %[t2]    \n\t"
-            "replv.ph        %[t1],  %[t1]              \n\t"
-            "replv.ph        %[t2],  %[t2]              \n\t"
-            "muleu_s.ph.qbl  %[t7],  %[t5],    %[t1]    \n\t"
-            "muleu_s.ph.qbr  %[t5],  %[t5],    %[t1]    \n\t"
-            "muleu_s.ph.qbl  %[t1],  %[t3],    %[t2]    \n\t"
-            "muleu_s.ph.qbr  %[t3],  %[t3],    %[t2]    \n\t"
-            "addiu           %[src], 8                  \n\t"
-            "precrq.qb.ph    %[t2],  %[t7],    %[t5]    \n\t"
-            "precrq.qb.ph    %[t1],  %[t1],    %[t3]    \n\t"
-            "addu            %[t2],  %[t2],    %[t6]    \n\t"
-            "addu            %[t1],  %[t1],    %[t4]    \n\t"
-            "sw              %[t2],  0(%[dst])          \n\t"
-            "sw              %[t1],  4(%[dst])          \n\t"
-            "bne             %[src], %[t8],    1b       \n\t"
-            " addiu          %[dst], 8                  \n\t"
-        "2:                                             \n\t"
-            ".set            pop                        \n\t"
-            : [src]"+r"(src), [dst]"+r"(dst), [t1]"=&r"(t1),
-              [t2]"=&r"(t2), [t3]"=&r"(t3), [t4]"=&r"(t4),
-              [t5]"=&r"(t5), [t6]"=&r"(t6), [t7]"=&r"(t7),
-              [t8]"=&r"(t8)
-            : [count]"r"(count), [t0]"r"(t0)
-            : "memory", "hi", "lo"
-        );
-    }
-}
-#endif // SK_CPU_MIPS
 
 static void S32A_Blend_BlitRow32(SkPMColor* SK_RESTRICT dst,
                                  const SkPMColor* SK_RESTRICT src,
@@ -359,7 +223,7 @@ void SkBlitRow::Color32(SkPMColor* SK_RESTRICT dst,
                 " addiu           %[dst],        %[dst],       16        \n\t"
             "2:                                                          \n\t"
                 "blez             %[tmp_a],      4f                      \n\t"
-                "nop                                                     \n\t"
+                " nop                                                    \n\t"
             "3:                                                          \n\t"
                 "lw               %[tmp1],       0(%[src])               \n\t"
                 "muleu_s.ph.qbl   %[tmp5],       %[tmp1],      %[scale]  \n\t"

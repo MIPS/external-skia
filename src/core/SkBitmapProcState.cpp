@@ -174,6 +174,7 @@ bool SkBitmapProcState::possiblyScaleImage() {
     if (fFilterLevel <= SkPaint::kLow_FilterLevel) {
         return false;
     }
+
     // Check to see if the transformation matrix is simple, and if we're
     // doing high quality scaling.  If so, do the bitmap scale here and
     // remove the scaling component from the matrix.
@@ -630,6 +631,7 @@ bool SkBitmapProcState::chooseProcs(const SkMatrix& inv, const SkPaint& paint) {
             NULL, NULL, NULL, NULL
         };
     #endif
+
 #if !SK_MIPS_DSP_IS_NONE
         fSampleProc32 = SK_MIPS_DSP_WRAP(gSkBitmapProcStateSample32)[index];
         index >>= 1;    // shift away any opaque/alpha distinction

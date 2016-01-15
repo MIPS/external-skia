@@ -63,7 +63,7 @@ static inline U8CPU SkMulDiv255Ceiling(U8CPU a, U8CPU b) {
 
 /** Just the rounding step in SkDiv255Round: round(value / 255)
  */
-#ifndef SK_CPU_MIPS
+#ifndef SK_MIPS_HAS_DSP
 static inline unsigned SkDiv255Round(unsigned prod) {
     prod += 128;
     return (prod + (prod >> 8)) >> 8;
@@ -81,6 +81,6 @@ static inline unsigned SkDiv255Round(unsigned prod) {
     );
     return temp0;
 }
-#endif  // SK_CPU_MIPS
+#endif  // SK_MIPS_HAS_DSP
 
 #endif

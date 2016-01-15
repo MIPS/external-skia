@@ -1008,7 +1008,6 @@ static inline SkPMColor SkBlendLCD16(int srcA, int srcR, int srcG, int srcB,
                         SkBlend32(srcB, dstB, maskB));
 }
 
-#ifndef SK_CPU_MIPS
 static inline SkPMColor SkBlendLCD16Opaque(int srcR, int srcG, int srcB,
                                            SkPMColor dst, uint16_t mask,
                                            SkPMColor opaqueDst) {
@@ -1043,66 +1042,7 @@ static inline SkPMColor SkBlendLCD16Opaque(int srcR, int srcG, int srcB,
                         SkBlend32(srcG, dstG, maskG),
                         SkBlend32(srcB, dstB, maskB));
 }
-#else
-static inline SkPMColor SkBlendLCD16Opaque(int srcR, int srcG, int srcB,
-                                           SkPMColor dst, uint16_t mask,
-                                           SkPMColor opaqueDst) {
-    int dstMask = 0xff00ff;
-    int c255 = 0xff;
-    int cffff = 0xffff;
-    int temp0, temp1, temp2, temp3, temp4, temp5,tmp_return;
 
-    __asm__ volatile (
-        ".set      push                                             \n\t"
-        ".set      noreorder                                        \n\t"
-        "bne       %[mask],       $zero,       1f                   \n\t"
-        " move     %[tmp_return], %[dst]                            \n\t"
-        "b         2f                                               \n\t"
-        " nop                                                       \n\t"
-    "1:                                                             \n\t"
-        "bne       %[mask],       %[cffff],    3f                   \n\t"
-        " ext      %[temp3],      %[mask],     0,         5         \n\t"
-        "b         2f                                               \n\t"
-        " move     %[tmp_return], %[opaqueDst]                      \n\t"
-    "3:                                                             \n\t"
-        "ext       %[temp2],      %[mask],     5,         6         \n\t"
-        "ext       %[temp1],      %[mask],     11,        5         \n\t"
-        "ins       %[temp3],      %[temp1],    16,        5         \n\t"
-        "srl       %[temp5],      %[temp2],    4                    \n\t"
-        "shrl.ph   %[temp1],      %[temp3],    4                    \n\t"
-        "addu      %[temp2],      %[temp2],    %[temp5]             \n\t"
-        "addu.ph   %[temp3],      %[temp3],    %[temp1]             \n\t"
-        "and       %[temp5],      %[dst],      %[dstMask]           \n\t"
-        "ext       %[temp1],      %[dst],      8,         8         \n\t"
-        "ins       %[srcR],       %[srcB],     16,        8         \n\t"
-        "and       %[srcR],       %[srcR],     %[dstMask]           \n\t"
-        "subu.ph   %[temp0],      %[srcR],     %[temp5]             \n\t"
-        "subu      %[temp4],      %[srcG],     %[temp1]             \n\t"
-        "mul.ph    %[temp0],      %[temp0],    %[temp3]             \n\t"
-        "mul       %[temp4],      %[temp4],    %[temp2]             \n\t"
-        "shra.ph   %[temp0],      %[temp0],    5                    \n\t"
-        "sra       %[temp4],      %[temp4],    5                    \n\t"
-        "addu.ph   %[temp0],      %[temp0],    %[temp5]             \n\t"
-        "addu      %[temp4],      %[temp4],    %[temp1]             \n\t"
-        "ins       %[temp0],      %[c255],     24,        8         \n\t"
-        "ins       %[temp0],      %[temp4],    8,         8         \n\t"
-        "move      %[tmp_return], %[temp0]                          \n\t"
-    "2:                                                             \n\t"
-        ".set      pop                                              \n\t"
-        : [mask]"+r"(mask), [dst]"+r"(dst), [temp0]"=&r"(temp0),
-          [temp1]"=&r"(temp1), [temp2]"=&r"(temp2), [temp3]"=&r"(temp3),
-          [temp4]"=&r"(temp4), [temp5]"=&r"(temp5),
-          [tmp_return]"=&r"(tmp_return), [srcR]"+r"(srcR), [srcB]"+r"(srcB)
-        : [srcG]"r"(srcG), [dstMask]"r"(dstMask), [c255]"r"(c255),
-          [opaqueDst]"r"(opaqueDst), [cffff]"r"(cffff)
-        : "memory", "hi", "lo"
-    );
-
-    return tmp_return;
-}
-#endif  // SK_CPU_MIPS
-
-#ifndef SK_CPU_MIPS
 static inline void SkBlitLCD16Row(SkPMColor dst[], const uint16_t mask[],
                                   SkColor src, int width, SkPMColor) {
     int srcA = SkColorGetA(src);
@@ -1116,72 +1056,7 @@ static inline void SkBlitLCD16Row(SkPMColor dst[], const uint16_t mask[],
         dst[i] = SkBlendLCD16(srcA, srcR, srcG, srcB, dst[i], mask[i]);
     }
 }
-#else
-static inline void SkBlitLCD16Row(SkPMColor dst[], const uint16_t mask[],
-                                  SkColor src, int width, SkPMColor) {
-    int srcA, srcRB, srcG, srcA2;
-    int temp0, temp1, temp2, temp3, temp4, temp5;
-    const int RBmask = 0xff00ff;
-    const SkColor* const loopEnd = dst + width;
 
-    __asm__ volatile (
-        ".set      push                             \n\t"
-        ".set      noreorder                        \n\t"
-        "and       %[srcRB], %[src],     %[RBmask]  \n\t"
-        "ext       %[srcA],  %[src],     24,   8    \n\t"
-        "ext       %[srcG],  %[src],     8,    8    \n\t"
-        "addiu     %[srcA],  %[srcA],    1          \n\t"
-        "replv.ph  %[srcA2], %[srcA]                \n\t"
-    "3:                                             \n\t"
-        "lh        %[temp0], 0(%[mask])             \n\t"
-        "bne       %[temp0], $zero,      1f         \n\t"
-        " ext      %[temp1], %[temp0],   0,    5    \n\t"
-        "addiu     %[dst],   %[dst],     4          \n\t"
-        "b         2f                               \n\t"
-        " addiu    %[mask],  %[mask],    2          \n\t"
-    "1:                                             \n\t"
-        "ext       %[temp2], %[temp0],   6,    5    \n\t"
-        "ext       %[temp0], %[temp0],   11,   5    \n\t"
-        "ins       %[temp1], %[temp0],   16,   5    \n\t"
-        "srl       %[temp3], %[temp2],   4          \n\t"
-        "shrl.ph   %[temp0], %[temp1],   4          \n\t"
-        "addu      %[temp2], %[temp2],   %[temp3]   \n\t"
-        "addu      %[temp1], %[temp1],   %[temp0]   \n\t"
-        "mul       %[temp2], %[temp2],   %[srcA]    \n\t"
-        "mul.ph    %[temp1], %[temp1],   %[srcA2]   \n\t"
-        "lw        %[temp0], 0(%[dst])              \n\t"
-        "addiu     %[mask],  %[mask],    2          \n\t"
-        "addiu     %[dst],   %[dst],     4          \n\t"
-        "and       %[temp3], %[temp0],   %[RBmask]  \n\t"
-        "ext       %[temp0], %[temp0],   8,    8    \n\t"
-        "sra       %[temp2], %[temp2],   8          \n\t"
-        "shra.ph   %[temp1], %[temp1],   8          \n\t"
-        "subu.ph   %[temp5], %[srcRB],   %[temp3]   \n\t"
-        "subu      %[temp4], %[srcG],    %[temp0]   \n\t"
-        "mul.ph    %[temp5], %[temp5],   %[temp1]   \n\t"
-        "mul       %[temp4], %[temp4],   %[temp2]   \n\t"
-        "shra.ph   %[temp5], %[temp5],   5          \n\t"
-        "sra       %[temp4], %[temp4],   5          \n\t"
-        "addu.ph   %[temp5], %[temp5],   %[temp3]   \n\t"
-        "addu      %[temp4], %[temp4],   %[temp0]   \n\t"
-        "ins       %[temp5], %[RBmask],  24,   8    \n\t"
-        "ins       %[temp5], %[temp4],   8,    8    \n\t"
-        "sw        %[temp5], -4(%[dst])             \n\t"
-    "2:                                             \n\t"
-        "bne       %[dst],   %[loopEnd], 3b         \n\t"
-        " nop                                       \n\t"
-        ".set    pop                                \n\t"
-        : [mask]"+r"(mask), [dst]"+r"(dst), [temp0]"=&r"(temp0),
-          [temp1]"=&r"(temp1), [temp2]"=&r"(temp2), [temp3]"=&r"(temp3),
-          [temp4]"=&r"(temp4), [temp5]"=&r"(temp5), [srcRB]"=&r"(srcRB),
-          [srcG]"=&r"(srcG), [srcA]"=&r"(srcA), [srcA2]"=&r"(srcA2)
-        : [RBmask]"r"(RBmask), [loopEnd]"r"(loopEnd), [src]"r"(src)
-        : "memory", "hi", "lo"
-    );
-}
-#endif  // SK_CPU_MIPS
-
-#ifndef SK_CPU_MIPS
 static inline void SkBlitLCD16OpaqueRow(SkPMColor dst[], const uint16_t mask[],
                                         SkColor src, int width,
                                         SkPMColor opaqueDst) {
@@ -1194,68 +1069,5 @@ static inline void SkBlitLCD16OpaqueRow(SkPMColor dst[], const uint16_t mask[],
                                     opaqueDst);
     }
 }
-#else
-static inline void SkBlitLCD16OpaqueRow(SkPMColor dst[], const uint16_t mask[],
-                                        SkColor src, int width,
-                                        SkPMColor opaqueDst) {
-    int srcG = SkColorGetG(src);
-    int dstMask = 0xff00ff;
-    int srcRB = src & dstMask;
-    int c255 = 0xff;
-    int cffff = 0xffff;
-    int temp0, temp1, temp2, temp3, temp4, temp5;
-
-    for (int i = 0; i < width; i++) {
-        __asm__ volatile (
-            ".set      push                                 \n\t"
-            ".set      noreorder                            \n\t"
-            "lhu       %[temp0],     0(%[mask])             \n\t"
-            "bne       %[temp0],     %[cffff], 1f           \n\t"
-            " lw       %[temp4],     0(%[dst])              \n\t"
-            "sw        %[opaqueDst], 0(%[dst])              \n\t"
-            "addiu     %[mask],      %[mask],  2            \n\t"
-            "b         2f                                   \n\t"
-            " addiu    %[dst],       %[dst],   4            \n\t"
-        "1:                                                 \n\t"
-            "bne       %[temp0],     $zero,    3f           \n\t"
-            " ext      %[temp3],     %[temp0], 0,  5        \n\t"
-            "addiu     %[mask],      %[mask],  2            \n\t"
-            "b         2f                                   \n\t"
-            " addiu    %[dst],       %[dst],   4            \n\t"
-        "3:                                                 \n\t"
-            "ext       %[temp1],     %[temp0], 11, 5        \n\t"
-            "ext       %[temp2],     %[temp0], 6,  5        \n\t"
-            "ins       %[temp3],     %[temp1], 16, 5        \n\t"
-            "srl       %[temp5],     %[temp2], 4            \n\t"
-            "shrl.ph   %[temp1],     %[temp3], 4            \n\t"
-            "addu      %[temp2],     %[temp2], %[temp5]     \n\t"
-            "addu.ph   %[temp3],     %[temp3], %[temp1]     \n\t"
-            "and       %[temp5],     %[temp4], %[dstMask]   \n\t"
-            "ext       %[temp1],     %[temp4], 8,  8        \n\t"
-            "subu.ph   %[temp0],     %[srcRB], %[temp5]     \n\t"
-            "subu      %[temp4],     %[srcG],  %[temp1]     \n\t"
-            "mul.ph    %[temp0],     %[temp0], %[temp3]     \n\t"
-            "mul       %[temp4],     %[temp4], %[temp2]     \n\t"
-            "addiu     %[mask],      %[mask],  2            \n\t"
-            "addiu     %[dst],       %[dst],   4            \n\t"
-            "shra.ph   %[temp0],     %[temp0], 5            \n\t"
-            "sra       %[temp4],     %[temp4], 5            \n\t"
-            "addu.ph   %[temp0],     %[temp0], %[temp5]     \n\t"
-            "addu      %[temp4],     %[temp4], %[temp1]     \n\t"
-            "ins       %[temp0],     %[c255],  24, 8        \n\t"
-            "ins       %[temp0],     %[temp4], 8,  8        \n\t"
-            "sw        %[temp0],     -4(%[dst])             \n\t"
-        "2:                                                 \n\t"
-            ".set      pop                                  \n\t"
-            : [mask]"+r"(mask), [dst]"+r"(dst), [temp0]"=&r"(temp0),
-              [temp1]"=&r"(temp1), [temp2]"=&r"(temp2), [temp3]"=&r"(temp3),
-              [temp4]"=&r"(temp4), [temp5]"=&r"(temp5)
-            : [srcRB]"r"(srcRB), [srcG]"r"(srcG), [dstMask]"r"(dstMask),
-              [c255]"r"(c255), [opaqueDst]"r"(opaqueDst), [cffff]"r"(cffff)
-            : "memory", "hi", "lo"
-        );
-    }
-}
-#endif // SK_CPU_MIPS
 
 #endif

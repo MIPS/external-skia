@@ -283,12 +283,8 @@ static void SCALE_FILTER_NAME(const SkBitmapProcState& s,
             "sgt     %[t3], %[t2],    %[maxX]    \n\t"
             "movn    %[t2], %[maxX],  %[t3]      \n\t"
             "ext     %[t4], %[fx],    12,    4   \n\t"
-#ifdef SK_MIPS_HAS_DSPR2
-            "append  %[t2], %[t4],    4          \n\t"
-#else
             "sll     %[t2], %[t2],    4          \n\t"
             "or      %[t2], %[t2],    %[t4]      \n\t"
-#endif
             "addu    %[t4], %[fx],    %[one]     \n\t"
             "sra     %[t5], %[t4],    16         \n\t"
             "slt     %[t3], %[t5],    $zero      \n\t"
@@ -344,12 +340,8 @@ static void AFFINE_FILTER_NAME(const SkBitmapProcState& s,
         "sgt     %[t3], %[t2],    %[maxY]      \n\t"
         "movn    %[t2], %[maxY],  %[t3]        \n\t"
         "ext     %[t4], %[fy],    12,     4    \n\t"
-#ifdef SK_MIPS_HAS_DSPR2
-        "append  %[t2], %[t4],    4            \n\t"
-#else
         "sll     %[t2], %[t2],    4            \n\t"
         "or      %[t2], %[t2],    %[t4]        \n\t"
-#endif
         "addu    %[t4], %[fy],    %[oneY]      \n\t"
         "sra     %[t5], %[t4],    16           \n\t"
         "slt     %[t3], %[t5],    $zero        \n\t"
@@ -365,12 +357,8 @@ static void AFFINE_FILTER_NAME(const SkBitmapProcState& s,
         "sgt     %[t3], %[t2],    %[maxX]      \n\t"
         "movn    %[t2], %[maxX],  %[t3]        \n\t"
         "ext     %[t4], %[fx],    12,     4    \n\t"
-#ifdef SK_MIPS_HAS_DSPR2
-        "append  %[t2], %[t4],    4            \n\t"
-#else
         "sll     %[t2], %[t2],    4            \n\t"
         "or      %[t2], %[t2],    %[t4]        \n\t"
-#endif
         "addu    %[t4], %[fx],    %[oneX]      \n\t"
         "sra     %[t5], %[t4],    16           \n\t"
         "slt     %[t3], %[t5],    $zero        \n\t"
@@ -444,12 +432,8 @@ static void PERSP_FILTER_NAME(const SkBitmapProcState& s,
             "andi         %[t2],    %[t2],    0xF       \n\t"
             "sra          %[t8],    %[t0],    16        \n\t"
             "sra          %[t9],    %[t1],    16        \n\t"
-#ifdef SK_MIPS_HAS_DSPR2
-            "append       %[t8],    %[t2],    4         \n\t"
-#else
             "sll          %[t8],    %[t8],    4         \n\t"
             "or           %[t8],    %[t8],    %[t2]     \n\t"
-#endif
             "sll          %[t8],    %[t8],    14        \n\t"
             "or           %[t6],    %[t8],    %[t9]     \n\t"
             "sw           %[t6],    0(%[xy])            \n\t"
@@ -457,12 +441,8 @@ static void PERSP_FILTER_NAME(const SkBitmapProcState& s,
             "andi         %[t2],    %[t2],    0xF       \n\t"
             "andi         %[t8],    %[t0],    0xFFFF    \n\t"
             "andi         %[t9],    %[t1],    0xFFFF    \n\t"
-#ifdef SK_MIPS_HAS_DSPR2
-            "append       %[t8],    %[t2],    4         \n\t"
-#else
             "sll          %[t8],    %[t8],    4         \n\t"
             "or           %[t8],    %[t8],    %[t2]     \n\t"
-#endif
             "sll          %[t8],    %[t8],    14        \n\t"
             "or           %[t6],    %[t8],    %[t9]     \n\t"
             "sw           %[t6],    4(%[xy])            \n\t"
