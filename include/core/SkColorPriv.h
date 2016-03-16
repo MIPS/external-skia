@@ -536,11 +536,25 @@ SkPMColor SkPremultiplyARGBInline(U8CPU a, U8CPU r, U8CPU g, U8CPU b) {
 // When Android is compiled optimizing for size, SkAlphaMulQ doesn't get
 // inlined; forcing inlining significantly improves performance.
 static SK_ALWAYS_INLINE uint32_t SkAlphaMulQ(uint32_t c, unsigned scale) {
+
+#ifdef SK_MIPS_HAS_DSP
+    register int32_t t0, t1, t2;
+    asm volatile(
+        "replv.ph        %[t2], %[scale]      \n\t"
+        "muleu_s.ph.qbr  %[t0], %[c], %[t2]   \n\t"
+        "muleu_s.ph.qbl  %[t1], %[c], %[t2]   \n\t"
+        "precrq.qb.ph    %[t2], %[t1], %[t0]  \n\t"
+        :[t2]"=&r"(t2), [t1]"=&r"(t1), [t0]"=&r"(t0)
+        :[c]"r"(c), [scale]"r"(scale)
+    );
+    return t2;
+#else
     uint32_t mask = 0xFF00FF;
 
     uint32_t rb = ((c & mask) * scale) >> 8;
     uint32_t ag = ((c >> 8) & mask) * scale;
     return (rb & mask) | (ag & ~mask);
+#endif // ifdef SK_MIPS_HAS_DSP
 }
 
 static inline SkPMColor SkPMSrcOver(SkPMColor src, SkPMColor dst) {

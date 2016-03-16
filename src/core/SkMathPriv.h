@@ -69,9 +69,24 @@ static inline U8CPU SkMulDiv255Ceiling(U8CPU a, U8CPU b) {
 
 /** Just the rounding step in SkDiv255Round: round(value / 255)
  */
+#ifndef SK_MIPS_HAS_DSP
 static inline unsigned SkDiv255Round(unsigned prod) {
     prod += 128;
     return (prod + (prod >> 8)) >> 8;
 }
+#else
+static inline unsigned SkDiv255Round(unsigned prod) {
+    unsigned temp0;
+
+    __asm__ volatile (
+        "shra_r.w   %[temp0], %[prod],  8          \n\t"
+        "addu       %[temp0], %[temp0], %[prod]    \n\t"
+        "shra_r.w   %[temp0], %[temp0], 8          \n\t"
+        : [temp0]"=&r"(temp0)
+        : [prod]"r"(prod)
+    );
+    return temp0;
+}
+#endif  // SK_MIPS_HAS_DSP
 
 #endif

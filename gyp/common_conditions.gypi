@@ -298,6 +298,9 @@
             'cflags': [
               '-EL',
             ],
+            'defines': [
+              'SK_CPU_MIPS',
+            ],
             'conditions': [
               [ 'mips_arch_variant == "mips32r2"', {
                 'cflags': [
