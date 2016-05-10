@@ -46,8 +46,16 @@ extern const SkBitmapProcState::MatrixProc RepeatX_RepeatY_Procs_neon[];
 
 #endif // !SK_ARM_NEON_IS_NONE
 
+#if !SK_MIPS_DSP_IS_NONE
+
+// These are defined in src/opts/SkBitmapProcState_matrixProcs_mips_dsp.cpp
+extern const SkBitmapProcState::MatrixProc ClampX_ClampY_Procs_mips_dsp[];
+extern const SkBitmapProcState::MatrixProc RepeatX_RepeatY_Procs_mips_dsp[];
+
+#endif // !SK_MIPS_DSP_IS_NONE
+
 // Compile non-neon code path if needed
-#if !SK_ARM_NEON_IS_ALWAYS
+#if !SK_ARM_NEON_IS_ALWAYS && !SK_MIPS_DSP_IS_ALWAYS
 #define MAKENAME(suffix)        ClampX_ClampY ## suffix
 #define TILEX_PROCF(fx, max)    SkClampMax((fx) >> 16, max)
 #define TILEY_PROCF(fy, max)    SkClampMax((fy) >> 16, max)

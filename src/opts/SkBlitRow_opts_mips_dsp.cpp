@@ -16,7 +16,7 @@
 static void S32_D565_Blend_mips_dsp(uint16_t* SK_RESTRICT dst,
                                     const SkPMColor* SK_RESTRICT src, int count,
                                     U8CPU alpha, int /*x*/, int /*y*/) {
-#if define(SK_MIPS_HAS_DSPR2)
+#ifdef SK_MIPS_HAS_DSPR2
     int temp0, temp1, temp2, temp3, temp4;
     int temp5, temp6, temp7, temp8, temp9;
     uint16_t* loopEnd = dst + (count & ~1);
@@ -149,7 +149,7 @@ static void S32_D565_Blend_mips_dsp(uint16_t* SK_RESTRICT dst,
 static void S32A_D565_Opaque_Dither_mips_dsp(uint16_t* __restrict__ dst,
                                              const SkPMColor* __restrict__ src,
                                              int count, U8CPU alpha, int x, int y) {
-#if define(SK_MIPS_HAS_DSPR2)
+#ifdef SK_MIPS_HAS_DSPR2
     int temp0, temp1, temp2, temp3, temp4, temp5;
     int temp6, temp7, temp8, temp9, temp10;
     uint16_t* loopEnd = dst + (count & ~1);
@@ -408,6 +408,7 @@ static void S32A_D565_Opaque_Dither_mips_dsp(uint16_t* __restrict__ dst,
     }
 }
 
+#ifdef SK_MIPS_HAS_DSPR2
 static void S32_D565_Opaque_Dither_mips_dsp(uint16_t* __restrict__ dst,
                                             const SkPMColor* __restrict__ src,
                                             int count, U8CPU alpha, int x, int y) {
@@ -495,7 +496,6 @@ static void S32_D565_Opaque_Dither_mips_dsp(uint16_t* __restrict__ dst,
     }
 }
 
-#if define(SK_MIPS_HAS_DSPR2)
 static void S32_D565_Blend_Dither_mips_dsp(uint16_t* dst,
                                            const SkPMColor* src,
                                            int count, U8CPU alpha, int x, int y) {
@@ -627,7 +627,7 @@ static void S32_D565_Blend_Dither_mips_dsp(uint16_t* dst,
 static void S32A_D565_Opaque_mips_dsp(uint16_t* __restrict__ dst,
                                       const SkPMColor* __restrict__ src,
                                       int count, U8CPU alpha, int x, int y) {
-#if define(SK_MIPS_HAS_DSPR2)
+#ifdef SK_MIPS_HAS_DSPR2
     int temp0, temp1, temp2, temp3, temp4, temp5;
     int temp6, temp7, temp8, temp9, temp10;
     uint16_t* loopEnd = dst + (count & ~1);
@@ -1138,10 +1138,11 @@ const SkBlitRow::Proc16 platform_565_procs_mips_dsp[] = {
     S32A_D565_Blend_mips_dsp,
 
     // dither
+#ifdef SK_MIPS_HAS_DSPR2
     S32_D565_Opaque_Dither_mips_dsp,
-#if define(SK_MIPS_HAS_DSPR2)
     S32_D565_Blend_Dither_mips_dsp,
 #else
+    NULL,
     NULL,
 #endif
     S32A_D565_Opaque_Dither_mips_dsp,
@@ -1165,12 +1166,4 @@ SkBlitRow::ColorProc16 SkBlitRow::PlatformColorFactory565(unsigned flags) {
 
 SkBlitRow::Proc32 SkBlitRow::PlatformProcs32(unsigned flags) {
     return platform_32_procs_mips_dsp[flags];
-}
-
-SkBlitRow::ColorRectProc PlatformColorRectProcFactory() {
-    return NULL;
-}
-
-SkBlitRow::ColorProc SkBlitRow::PlatformColorProc() {
-    return NULL;
 }
