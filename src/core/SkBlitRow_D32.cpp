@@ -142,7 +142,7 @@ SkBlitRow::Proc32 SkBlitRow::ColorProcFactory() {
     return proc;
 }
 
-#ifndef SK_CPU_MIPS
+#ifndef SK_MIPS_HAS_DSP
 void SkBlitRow::Color32(SkPMColor* SK_RESTRICT dst,
                         const SkPMColor* SK_RESTRICT src,
                         int count, SkPMColor color) {

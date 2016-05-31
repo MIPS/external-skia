@@ -648,15 +648,13 @@ LOCAL_CFLAGS_mips += \
 	-DSK_CPU_MIPS
 
 LOCAL_SRC_FILES_mips += \
-	src/opts/SkBitmapProcState_mips_dsp.cpp \
-	src/opts/SkBitmapProcState_opts_mips_dsp.cpp \
-	src/opts/SkBitmapProcState_matrixProcs_mips_dsp.cpp \
+	src/opts/SkBitmapProcState_opts_none.cpp \
 	src/opts/SkBlitMask_opts_none.cpp \
-	src/opts/SkBlurImage_opts_mips_dsp.cpp \
-	src/opts/SkMorphology_opts_mips_dsp.cpp \
+	src/opts/SkBlitRow_opts_none.cpp \
+	src/opts/SkBlurImage_opts_none.cpp \
+	src/opts/SkMorphology_opts_none.cpp \
 	src/opts/SkUtils_opts_none.cpp \
-	src/opts/SkXfermode_opts_none.cpp \
-	src/opts/SkBlitRow_opts_mips_dsp.cpp
+	src/opts/SkXfermode_opts_none.cpp
 
 LOCAL_CFLAGS_mips32r2dspr1 += \
 	-EL \
