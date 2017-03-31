@@ -78,6 +78,46 @@ static void morph(const SkPMColor* src, SkPMColor* dst,
     }
 }
 
+#elif defined(SK_MIPS_HAS_MSA)
+#include <msa.h>
+template<MorphType type, MorphDirection direction>
+static void morph(const SkPMColor* src, SkPMColor* dst,
+                  int radius, int width, int height, int srcStride, int dstStride) {
+
+    const int srcStrideX = direction == MorphDirection::kX ? 1 : srcStride;
+    const int dstStrideX = direction == MorphDirection::kX ? 1 : dstStride;
+    const int srcStrideY = direction == MorphDirection::kX ? srcStride : 1;
+    const int dstStrideY = direction == MorphDirection::kX ? dstStride : 1;
+    radius = SkMin32(radius, width - 1);
+    const SkPMColor* upperSrc = src + radius * srcStrideX;
+    for (int x = 0; x < width; ++x) {
+        const SkPMColor* lp = src;
+        const SkPMColor* up = upperSrc;
+        SkPMColor* dptr = dst;
+        for (int y = 0; y < height; ++y) {
+            v4i32 temp1;
+            if(type == kDilate)
+                temp1 = __builtin_msa_fill_w(0);
+            else
+                temp1 = __builtin_msa_fill_w(0xFFFFFFFF);
+            for (const SkPMColor* p = lp; p <= up; p += srcStrideX) {
+                int a1 = p[0];
+                v4i32 temp2 = __builtin_msa_fill_w(a1);
+                if(type == kDilate)
+                    temp1 = __builtin_msa_max_u_b (temp1,temp2);
+                else
+                    temp1 = __builtin_msa_min_u_b (temp1,temp2);
+            }
+            *dptr = temp1[0];
+            dptr += dstStrideY;
+            lp += srcStrideY;
+            up += srcStrideY;
+        }
+        if (x >= radius) { src += srcStrideX; }
+        if (x + radius < width - 1) { upperSrc += srcStrideX; }
+        dst += dstStrideX;
+    }
+}
 #else
 template<MorphType type, MorphDirection direction>
 static void morph(const SkPMColor* src, SkPMColor* dst,
