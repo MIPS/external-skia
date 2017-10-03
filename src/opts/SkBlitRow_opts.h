@@ -14,6 +14,8 @@
 
 #if SK_CPU_SSE_LEVEL >= SK_CPU_SSE_LEVEL_SSE2
     #include "SkColor_opts_SSE2.h"
+#elif defined(SK_CPU_MIPS_MSA)
+    #include <msa.h>
 #endif
 
 namespace SK_OPTS_NS {
@@ -187,6 +189,28 @@ void blit_row_s32a_opaque(SkPMColor* dst, const SkPMColor* src, int len, U8CPU a
         dst += 4;
         len -= 4;
     }
+
+#elif defined(SK_CPU_MIPS_MSA)
+    v4i32 v0 = __builtin_msa_fill_w(0);
+    v4i32 v_256 = __builtin_msa_fill_w(256);
+    while (len > 3) {
+        v4i32 v1 = __builtin_msa_ld_w((void*)src, 0);
+        v4i32 v2 = __builtin_msa_ld_w(dst, 0);
+        v4i32 v3 = __builtin_msa_srli_w(v1, 24);
+        v3 = __builtin_msa_subv_w(v_256, v3);
+        v3 = __builtin_msa_ilvev_h(v3, v3);
+        v4i32 v4 = __builtin_msa_ilvod_b(v0, v2);
+        v2 = __builtin_msa_ilvev_b(v0, v2);
+        v4 = __builtin_msa_mulv_h(v4, v3);
+        v2 = __builtin_msa_mulv_h(v2, v3);
+        src += 4;
+        v2 = __builtin_msa_ilvod_b(v4, v2);
+        len -= 4;
+        v1 = __builtin_msa_addv_w(v1, v2);
+        __builtin_msa_st_w(v1, dst, 0);
+        dst += 4;
+    }
+
 #endif
 
     while (len-- > 0) {

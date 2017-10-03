@@ -13,6 +13,8 @@
 
 #if SK_CPU_SSE_LEVEL >= SK_CPU_SSE_LEVEL_SSE2
     #include <immintrin.h>
+#elif defined(SK_CPU_MIPS_MSA)
+    #include <msa.h>
 #endif
 
 namespace SK_OPTS_NS {
@@ -193,6 +195,25 @@ static inline uint16x4_t expand(SkPMColor p) {
                                                           kernelSize, leftOffset, rightOffset, \
                                                           width, height); \
     }
+
+#elif defined(SK_CPU_MIPS_MSA)
+
+static inline v4u32 expand(SkPMColor p) {
+    v16i8 zero = {0};
+    return (v4u32)__msa_ilvr_h((v8i16)zero, (v8i16)__msa_ilvr_b(zero, (v16i8)__msa_fill_w(p)));
+};
+
+#define INIT_SCALE const v4u32 scale = (v4u32)__msa_fill_w((1 << 24) / kernelSize);
+#define INIT_HALF const v4u32 half = __msa_fill_w(1 << 23);
+#define INIT_SUMS v4u32 sum = (v4u32)__msa_ldi_w(0);
+#define INCREMENT_SUMS(c) sum += expand(c);
+#define DECREMENT_SUMS(c) sum -= expand(c);
+#define STORE_SUMS \
+    v4u32 result = ((v4u32)__msa_maddv_w((v4i32)half, (v4i32)sum, (v4i32)scale)) >> 24; \
+    v8u16 result16 = (v8u16)__msa_pckev_h((v8i16)result, (v8i16)result); \
+    v16u8 result8 = (v16u8)__msa_pckev_b((v16i8)result16, (v16i8)result16); \
+    *dptr = (uint32_t)__msa_copy_u_w(result8, 0);
+#define DOUBLE_ROW_OPTIMIZATION
 
 #else  // Neither NEON nor >=SSE2.
 

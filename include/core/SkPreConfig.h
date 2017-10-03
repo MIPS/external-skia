@@ -204,6 +204,13 @@
 #endif
 
 //////////////////////////////////////////////////////////////////////
+// MIPS defines
+
+#if !defined(SK_CPU_MIPS_MSA) && !defined(SK_BUILD_NO_OPTS) && (__mips_isa_rev >= 5) && defined(__mips_msa)
+    #define SK_CPU_MIPS_MSA 1
+#endif
+
+/////////////////////////////////////////////////////////////////////
 
 #if !defined(SKIA_IMPLEMENTATION)
     #define SKIA_IMPLEMENTATION 0

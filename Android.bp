@@ -777,13 +777,27 @@ cc_library {
                 "src/opts/SkBlitMask_opts_none.cpp",
                 "src/opts/SkBlitRow_opts_none.cpp",
             ],
+            msa: {
+                srcs: [
+                    "src/opts/SkOpts_msa.cpp",
+                    "src/opts/SkBitmapProcState_opts_mips_msa.cpp",
+                    "src/opts/SkBlitMask_opts_mips_msa.cpp",
+                    "src/opts/SkBlitRow_opts_mips_msa.cpp",
+                ],
+                exclude_srcs: [
+                    "src/opts/SkBitmapProcState_opts_none.cpp",
+                    "src/opts/SkBlitMask_opts_none.cpp",
+                    "src/opts/SkBlitRow_opts_none.cpp",
+                ],
+            },
         },
 
         mips64: {
             srcs: [
-                "src/opts/SkBitmapProcState_opts_none.cpp",
-                "src/opts/SkBlitMask_opts_none.cpp",
-                "src/opts/SkBlitRow_opts_none.cpp",
+                "src/opts/SkOpts_msa.cpp",
+                "src/opts/SkBitmapProcState_opts_mips_msa.cpp",
+                "src/opts/SkBlitMask_opts_mips_msa.cpp",
+                "src/opts/SkBlitRow_opts_mips_msa.cpp",
             ],
         },
 
